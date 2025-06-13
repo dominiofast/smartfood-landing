@@ -1,6 +1,5 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from 'react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { AIProvider } from './contexts/AIContext';
@@ -18,19 +17,9 @@ import Reports from './pages/Reports';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: 1,
-    },
-  },
-});
-
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+    <AuthProvider>
         <AIProvider>
           <Router>
             <Toaster
@@ -91,7 +80,6 @@ function App() {
           </Router>
         </AIProvider>
       </AuthProvider>
-    </QueryClientProvider>
   );
 }
 
