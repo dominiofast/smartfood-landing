@@ -54,12 +54,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response: AuthResponse = await authService.login(credentials);
       
-      if (response.success) {
-        localStorage.setItem('token', response.token);
+      console.log('Resposta do login no contexto:', response);
+      
+      if (response && response.success) {
+        // Garantir que o token seja armazenado corretamente
+        if (response.token) {
+          console.log('Armazenando token:', response.token.substring(0, 20) + '...');
+          localStorage.setItem('token', response.token);
+          
+          // Verificar se o token foi armazenado corretamente
+          const storedToken = localStorage.getItem('token');
+          console.log('Token armazenado:', storedToken ? 'Sim' : 'Não');
+        } else {
+          console.error('Token não encontrado na resposta');
+        }
+        
+        // Atualizar o estado do usuário
         setUser(response.user);
         
         // Redirect based on role
         if (response.user.role === 'superadmin') {
+          console.log('Redirecionando para /superadmin');
           navigate('/superadmin');
         } else if (response.user.role === 'manager') {
           navigate('/manager');
@@ -68,9 +83,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
         
         toast.success(`Bem-vindo, ${response.user.name}!`);
+      } else {
+        console.error('Resposta de login inválida:', response);
+        toast.error('Resposta de login inválida');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao fazer login');
+      console.error('Erro ao fazer login:', error);
+      toast.error(error.message || error.response?.data?.error || 'Erro ao fazer login');
       throw error;
     }
   };

@@ -3,13 +3,36 @@ import { User, LoginCredentials, AuthResponse } from '../types';
 
 class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    // Verificar se estamos em produção (Netlify) ou desenvolvimento local
-    const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
-      ? '/.netlify/functions/auth-login' 
-      : '/auth/login';
-    
-    const response = await api.post<AuthResponse>(endpoint, credentials);
-    return response.data;
+    try {
+      // Verificar se estamos em produção (Netlify) ou desenvolvimento local
+      const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+        ? '/.netlify/functions/auth-login' 
+        : '/auth/login';
+      
+      console.log('Fazendo login em:', endpoint);
+      
+      // Fazer a requisição diretamente para garantir que recebemos a resposta correta
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(credentials)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Resposta do login:', data);
+      
+      return data;
+    } catch (error) {
+      console.error('Erro no serviço de login:', error);
+      throw error;
+    }
   }
 
   async register(userData: {
