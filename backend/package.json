@@ -1,7 +1,7 @@
 {
-  "name": "smartfood-backend",
+  "name": "dominiotech-backend",
   "version": "1.0.0",
-  "description": "Backend do SmartFood - Sistema de Gestão de Restaurantes",
+  "description": "Backend do DomínioTech - Sistema de Gestão de Restaurantes",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

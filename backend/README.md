@@ -1,6 +1,6 @@
-# SmartFood Backend API
+# DomínioTech Backend API
 
-API REST para o sistema de gestão de restaurantes SmartFood.
+API REST para o sistema de gestão de restaurantes DomínioTech.
 
 ## Arquitetura
 

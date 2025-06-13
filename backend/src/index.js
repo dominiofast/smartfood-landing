@@ -61,7 +61,7 @@ app.use('/api/users', userRoutes);
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
-    message: 'SmartFood API está funcionando!',
+    message: 'DomínioTech API está funcionando!',
     timestamp: new Date().toISOString()
   });
 });

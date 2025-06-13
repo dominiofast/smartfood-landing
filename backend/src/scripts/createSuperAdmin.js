@@ -27,7 +27,7 @@ const createSuperAdmin = async () => {
     // Criar superadmin
     const superAdmin = await User.create({
       name: 'Super Admin',
-      email: process.env.SUPERADMIN_EMAIL || 'admin@smartfood.com',
+      email: process.env.SUPERADMIN_EMAIL || 'admin@dominiotech.com',
       password: process.env.SUPERADMIN_PASSWORD || 'SuperAdmin@123',
       role: 'superadmin'
     });
