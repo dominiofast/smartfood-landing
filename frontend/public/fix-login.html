@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Correção de Login SmartFood</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .info {
+            margin-bottom: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .panel h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Correção de Login SmartFood</h1>
+    
+    <div class="info">
+        <p>Esta página permite corrigir o problema de login e fazer login manualmente.</p>
+    </div>
+    
+    <div class="panel">
+        <h2>1. Login Manual</h2>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="admin@dominiotech.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Senha:</label>
+            <input type="password" id="password" value="SuperAdmin@123">
+        </div>
+        
+        <button id="loginBtn">Fazer Login</button>
+        <pre id="loginResult">Os resultados aparecerão aqui...</pre>
+    </div>
+    
+    <div class="panel">
+        <h2>2. Redirecionar para Dashboard</h2>
+        <button id="redirectBtn">Ir para Dashboard</button>
+        <pre id="redirectResult">Os resultados aparecerão aqui...</pre>
+    </div>
+    
+    <div class="panel">
+        <h2>3. Limpar Dados</h2>
+        <button id="clearBtn">Limpar localStorage</button>
+        <pre id="clearResult">Os resultados aparecerão aqui...</pre>
+    </div>
+
+    <script>
+        // Login manual
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const loginResult = document.getElementById('loginResult');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            loginResult.innerHTML = 'Fazendo login...';
+            
+            try {
+                // Determinar o endpoint correto
+                const loginEndpoint = '/.netlify/functions/auth-login';
+                
+                // Fazer a requisição de login
+                const response = await fetch(loginEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                // Processar a resposta
+                if (response.ok && data.success) {
+                    // Armazenar token no localStorage
+                    localStorage.setItem('token', data.token);
+                    
+                    // Armazenar dados do usuário no localStorage para persistência
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    
+                    loginResult.innerHTML = `<span class="success">✓ Login bem-sucedido!</span>\n\n`;
+                    loginResult.innerHTML += `Token armazenado no localStorage.\n\n`;
+                    loginResult.innerHTML += `Usuário: ${data.user.name} (${data.user.role})\n\n`;
+                    loginResult.innerHTML += JSON.stringify(data, null, 2);
+                } else {
+                    loginResult.innerHTML = `<span class="error">✗ Erro no login! Status: ${response.status}</span>\n\n`;
+                    loginResult.innerHTML += JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                loginResult.innerHTML = `<span class="error">Erro ao fazer login: ${error.message}</span>`;
+            }
+        });
+        
+        // Redirecionar para dashboard
+        document.getElementById('redirectBtn').addEventListener('click', () => {
+            const redirectResult = document.getElementById('redirectResult');
+            
+            try {
+                const token = localStorage.getItem('token');
+                const userString = localStorage.getItem('user');
+                
+                if (!token || !userString) {
+                    redirectResult.innerHTML = '<span class="error">Nenhum token ou usuário encontrado. Faça login primeiro.</span>';
+                    return;
+                }
+                
+                const user = JSON.parse(userString);
+                const role = user.role;
+                
+                // Determinar para onde redirecionar com base no papel
+                let redirectTo = '/dashboard';
+                
+                if (role === 'superadmin') {
+                    redirectTo = '/superadmin';
+                } else if (role === 'manager') {
+                    redirectTo = '/manager';
+                }
+                
+                redirectResult.innerHTML = `<span class="success">Redirecionando para: ${redirectTo}</span>\n\n`;
+                redirectResult.innerHTML += `Papel do usuário: ${role}\n\n`;
+                redirectResult.innerHTML += `URL completa: ${window.location.origin}${redirectTo}\n\n`;
+                redirectResult.innerHTML += `Clique no link para ir: <a href="${redirectTo}">${redirectTo}</a>`;
+                
+                // Redirecionar automaticamente após 2 segundos
+                setTimeout(() => {
+                    window.location.href = redirectTo;
+                }, 2000);
+            } catch (error) {
+                redirectResult.innerHTML = `<span class="error">Erro ao redirecionar: ${error.message}</span>`;
+            }
+        });
+        
+        // Limpar localStorage
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            const clearResult = document.getElementById('clearResult');
+            
+            try {
+                localStorage.removeItem('token');
+                localStorage.removeItem('user');
+                
+                clearResult.innerHTML = '<span class="success">✓ localStorage limpo com sucesso!</span>';
+            } catch (error) {
+                clearResult.innerHTML = `<span class="error">Erro ao limpar localStorage: ${error.message}</span>`;
+            }
+        });
+    </script>
+</body>
+</html>
