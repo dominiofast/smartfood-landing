@@ -10,11 +10,48 @@ exports.handler = async (event, context) => {
   }
 
   try {
+    // Primeiro verificar se a tabela users existe
+    try {
+      const tableCheck = await query(
+        `SELECT to_regclass('public.users') as table_exists`,
+        []
+      );
+      
+      const tableExists = tableCheck.rows[0].table_exists !== null;
+      
+      if (!tableExists) {
+        return {
+          statusCode: 404,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            error: 'Tabela de usuários não encontrada',
+            details: 'A tabela "users" não existe no banco de dados',
+            setup_required: true
+          })
+        };
+      }
+    } catch (tableError) {
+      console.error('Erro ao verificar tabela:', tableError);
+      return {
+        statusCode: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          error: 'Erro ao verificar estrutura do banco de dados',
+          details: tableError.message,
+          stack: tableError.stack
+        })
+      };
+    }
+
     // Verificar se existe um superadmin
     const result = await query(
       `SELECT id, name, email, role, created_at 
        FROM users 
-       WHERE role = 'superadmin' AND is_active = true`,
+       WHERE role = 'superadmin'`,
       []
     );
 
@@ -52,7 +89,15 @@ exports.handler = async (event, context) => {
     console.error('Erro ao verificar superadmin:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Erro ao verificar superadmin' })
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        error: 'Erro ao verificar superadmin',
+        message: error.message,
+        stack: error.stack,
+        database_url_exists: !!process.env.DATABASE_URL
+      })
     };
   }
 };
