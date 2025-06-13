@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFood - Gestão Inteligente de Restaurantes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+</head>
+<body class="bg-white">
+    <!-- Header -->
+    <header class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-gray-100">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <div class="w-8 h-8 bg-gradient-to-r from-green-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold">🧠</span>
+                    </div>
+                    <span class="text-xl font-bold text-gray-900">SmartFood</span>
+                </div>
+                <nav class="hidden md:flex items-center space-x-8">
+                    <a href="#features" class="text-gray-600 hover:text-gray-900">Funcionalidades</a>
+                    <a href="#pricing" class="text-gray-600 hover:text-gray-900">Preços</a>
+                    <a href="#testimonials" class="text-gray-600 hover:text-gray-900">Depoimentos</a>
+                    <button class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">
+                        Teste Grátis
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="pt-24 pb-16 bg-gradient-to-br from-green-50 via-blue-50 to-purple-50">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto text-center">
+                <div class="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-medium mb-6">
+                    <span>⚡</span>
+                    <span>IA Revolucionária para Food Service</span>
+                </div>
+                
+                <h1 class="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                    Revolucione seu Bar ou Restaurante com
+                    <span class="bg-gradient-to-r from-green-600 to-purple-600 bg-clip-text text-transparent">
+                        Inteligência Artificial
+                    </span>
+                </h1>
+                
+                <p class="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+                    Gerencie múltiplas unidades, otimize operações e aumente lucros com nossa plataforma alimentada por IA. 
+                    Mais de 1.000 estabelecimentos já transformaram seus negócios.
+                </p>
+                
+                <div class="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-12">
+                    <button class="bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-4 rounded-lg text-lg font-medium hover:from-green-700 hover:to-green-800 transition-all transform hover:scale-105 shadow-lg">
+                        Comece Grátis por 14 Dias
+                    </button>
+                    <button class="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
+                        <span>Ver Demonstração</span>
+                        <span>→</span>
+                    </button>
+                </div>
+                
+                <div class="flex items-center justify-center space-x-8 text-sm text-gray-500">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-green-600">✓</span>
+                        <span>14 dias grátis</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-green-600">✓</span>
+                        <span>Sem cartão necessário</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-green-600">✓</span>
+                        <span>Cancele quando quiser</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-bold text-gray-900 mb-6">
+                        Funcionalidades que Fazem a Diferença
+                    </h2>
+                    <p class="text-xl text-gray-600 max-w-3xl mx-auto">
+                        Nossa plataforma combina tecnologia de ponta com simplicidade de uso
+                    </p>
+                </div>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                        <div class="text-green-600 text-3xl mb-4">🏪</div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Gestão Multi-Unidades</h3>
+                        <p class="text-gray-600">Controle todas suas lojas em um painel centralizado</p>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                        <div class="text-purple-600 text-3xl mb-4">🧠</div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">IA Preditiva Avançada</h3>
+                        <p class="text-gray-600">Nossa IA analisa padrões e prevê demanda automaticamente</p>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                        <div class="text-blue-600 text-3xl mb-4">📈</div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Otimização de Preços</h3>
+                        <p class="text-gray-600">Algoritmos inteligentes sugerem preços ideais</p>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                        <div class="text-orange-600 text-3xl mb-4">📦</div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Controle de Estoque</h3>
+                        <p class="text-gray-600">Gerencie ingredientes e monitore validades</p>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                        <div class="text-indigo-600 text-3xl mb-4">📊</div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Dashboards Intuitivos</h3>
+                        <p class="text-gray-600">Visualize métricas importantes com gráficos claros</p>
+                    </div>
+                    
+                    <div class="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100">
+                        <div class="text-red-600 text-3xl mb-4">👥</div>
+                        <h3 class="text-xl font-semibold text-gray-900 mb-3">Gestão de Equipe</h3>
+                        <p class="text-gray-600">Controle acessos e monitore performance da equipe</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results -->
+    <section class="py-16 bg-gradient-to-r from-green-600 to-purple-600 text-white">
+        <div class="container mx-auto px-4">
+            <div class="max-w-6xl mx-auto text-center">
+                <h2 class="text-4xl font-bold mb-6">Resultados Comprovados</h2>
+                <p class="text-xl mb-12 opacity-90">Nossos clientes veem resultados reais em semanas</p>
+
+                <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="text-center">
+                        <div class="text-4xl font-bold mb-2">35%</div>
+                        <div class="text-lg opacity-90">Aumento médio nas vendas</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold mb-2">40%</div>
+                        <div class="text-lg opacity-90">Redução no desperdício</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold mb-2">15h</div>
+                        <div class="text-lg opacity-90">Horas economizadas/semana</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-4xl font-bold mb-2">1000+</div>
+                        <div class="text-lg opacity-90">Estabelecimentos atendidos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+            <div class="max-w-6xl mx-auto">
+                <div class="text-center mb-16">
+                    <h2 class="text-4xl font-bold text-gray-900 mb-6">Planos para Todos os Tamanhos</h2>
+                    <p class="text-xl text-gray-600">Escolha o plano ideal para seu negócio</p>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+                    <div class="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
+                        <div class="text-center mb-8">
+                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Starter</h3>
+                            <p class="text-gray-600 mb-4">Perfeito para começar</p>
+                            <div class="flex items-center justify-center">
+                                <span class="text-4xl font-bold text-gray-900">R$ 97</span>
+                                <span class="text-gray-600 ml-2">/mês</span>
+                            </div>
+                        </div>
+                        <button class="w-full py-3 px-6 rounded-lg font-medium bg-gray-100 text-gray-900 hover:bg-gray-200">
+                            Começar Teste Grátis
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-lg border-2 border-green-500 p-8 scale-105 relative">
+                        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                            <div class="bg-green-500 text-white px-4 py-2 rounded-full text-sm font-medium">
+                                Mais Popular
+                            </div>
+                        </div>
+                        <div class="text-center mb-8">
+                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Professional</h3>
+                            <p class="text-gray-600 mb-4">Para negócios em crescimento</p>
+                            <div class="flex items-center justify-center">
+                                <span class="text-4xl font-bold text-gray-900">R$ 197</span>
+                                <span class="text-gray-600 ml-2">/mês</span>
+                            </div>
+                        </div>
+                        <button class="w-full py-3 px-6 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700">
+                            Começar Teste Grátis
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-2xl shadow-lg border-2 border-gray-200 p-8">
+                        <div class="text-center mb-8">
+                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Enterprise</h3>
+                            <p class="text-gray-600 mb-4">Para redes estabelecidas</p>
+                            <div class="flex items-center justify-center">
+                                <span class="text-4xl font-bold text-gray-900">R$ 397</span>
+                                <span class="text-gray-600 ml-2">/mês</span>
+                            </div>
+                        </div>
+                        <button class="w-full py-3 px-6 rounded-lg font-medium bg-gray-100 text-gray-900 hover:bg-gray-200">
+                            Começar Teste Grátis
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-16 bg-gradient-to-r from-green-600 to-purple-600 text-white">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto text-center">
+                <h2 class="text-4xl font-bold mb-6">Pronto para Revolucionar seu Negócio?</h2>
+                <p class="text-xl mb-8 opacity-90">
+                    Junte-se a mais de 1.000 estabelecimentos que já transformaram seus negócios
+                </p>
+                
+                <button class="bg-white text-green-600 px-8 py-4 rounded-lg text-lg font-medium hover:bg-gray-100 mb-8">
+                    Comece Seu Teste Grátis
+                </button>
+
+                <div class="flex items-center justify-center space-x-8 text-sm opacity-80">
+                    <div class="flex items-center space-x-2">
+                        <span>✓</span>
+                        <span>14 dias grátis</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span>✓</span>
+                        <span>Garantia de 30 dias</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span>✓</span>
+                        <span>Setup em 24h</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="max-w-6xl mx-auto text-center">
+                <div class="flex items-center justify-center space-x-2 mb-4">
+                    <div class="w-8 h-8 bg-gradient-to-r from-green-600 to-purple-600 rounded-lg flex items-center justify-center">
+                        <span class="text-white font-bold">🧠</span>
+                    </div>
+                    <span class="text-xl font-bold">SmartFood</span>
+                </div>
+                <p class="text-gray-400 mb-8">
+                    A revolução da gestão de restaurantes através da inteligência artificial.
+                </p>
+                <div class="border-t border-gray-800 pt-8">
+                    <p class="text-gray-400 text-sm">
+                        © 2025 SmartFood. Todos os direitos reservados.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>
