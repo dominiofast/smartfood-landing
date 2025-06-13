@@ -46,8 +46,8 @@ const transaction = async (callback) => {
 };
 
 exports.handler = async (event, context) => {
-  // Apenas permitir POST
-  if (event.httpMethod !== 'POST') {
+  // Permitir GET e POST
+  if (event.httpMethod !== 'POST' && event.httpMethod !== 'GET') {
     return {
       statusCode: 405,
       body: JSON.stringify({ error: 'Método não permitido' })
