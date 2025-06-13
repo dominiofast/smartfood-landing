@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { AIProvider } from './contexts/AIContext';
 
 // Pages
+import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import ManagerDashboard from './pages/ManagerDashboard';
@@ -49,6 +50,7 @@ function App() {
         <AIProvider>
           <Routes>
             {/* Public Routes */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             
             {/* Protected Routes */}
@@ -74,8 +76,8 @@ function App() {
               </Route>
             </Route>
             
-            {/* Default Redirect */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
+            {/* Catch all - Redirect to landing */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AIProvider>
       </AuthProvider>
