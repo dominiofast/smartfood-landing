@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuração do SmartFood</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .info {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Configuração do Banco de Dados SmartFood</h1>
+    
+    <div class="info">
+        <p>Esta página permite configurar o banco de dados e criar o usuário superadmin.</p>
+        <p>Use os botões abaixo para verificar o estado atual do banco de dados e criar as tabelas e o superadmin se necessário.</p>
+    </div>
+    
+    <button id="checkBtn">Verificar Banco de Dados</button>
+    <button id="setupBtn">Configurar Banco de Dados e Criar Superadmin</button>
+    
+    <div id="result">Os resultados aparecerão aqui...</div>
+
+    <script>
+        document.getElementById('checkBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Verificando banco de dados...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/diagnose-db');
+                const data = await response.json();
+                
+                resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                
+                if (data.database && data.database.connection) {
+                    resultDiv.innerHTML = '<span class="success">✓ Conexão com o banco de dados estabelecida!</span>\n\n' + resultDiv.innerHTML;
+                } else {
+                    resultDiv.innerHTML = '<span class="error">✗ Erro na conexão com o banco de dados!</span>\n\n' + resultDiv.innerHTML;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Erro ao verificar banco de dados: ${error.message}</span>`;
+            }
+        });
+        
+        document.getElementById('setupBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Configurando banco de dados e criando superadmin...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/diagnose-db', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                resultDiv.innerHTML = JSON.stringify(data, null, 2);
+                
+                if (data.actions && data.actions.performed && data.actions.performed.length > 0) {
+                    let summary = '<span class="success">✓ Ações realizadas:</span>\n';
+                    
+                    if (data.actions.performed.includes('created_stores_table')) {
+                        summary += '- Tabela "stores" criada\n';
+                    }
+                    
+                    if (data.actions.performed.includes('created_users_table')) {
+                        summary += '- Tabela "users" criada\n';
+                    }
+                    
+                    if (data.actions.performed.includes('created_superadmin')) {
+                        summary += '- Superadmin criado\n';
+                        summary += '  Email: admin@dominiotech.com\n';
+                        summary += '  Senha: SuperAdmin@123\n';
+                    }
+                    
+                    if (data.actions.performed.includes('reset_superadmin_password')) {
+                        summary += '- Senha do superadmin redefinida\n';
+                        summary += '  Email: admin@dominiotech.com\n';
+                        summary += '  Senha: SuperAdmin@123\n';
+                    }
+                    
+                    resultDiv.innerHTML = summary + '\n\n' + resultDiv.innerHTML;
+                } else {
+                    resultDiv.innerHTML = '<span class="info">Nenhuma ação foi necessária.</span>\n\n' + resultDiv.innerHTML;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Erro ao configurar banco de dados: ${error.message}</span>`;
+            }
+        });
+    </script>
+</body>
+</html>
