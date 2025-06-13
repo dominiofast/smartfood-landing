@@ -5,6 +5,33 @@ import { motion } from 'framer-motion';
 const LandingPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
+      {/* Formulário de Teste Grátis 10 Dias */}
+      <section className="w-full bg-gradient-to-r from-green-600 to-purple-600 py-10">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="md:w-1/2 text-white mb-8 md:mb-0">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Teste grátis por 10 dias!</h2>
+            <p className="text-lg opacity-90 mb-2">Experimente todas as funcionalidades sem compromisso.</p>
+            <p className="text-sm opacity-80">Preencha o formulário ao lado e comece agora mesmo.</p>
+          </div>
+          <form className="md:w-1/2 bg-white rounded-xl shadow-lg p-6 md:p-8 flex flex-col gap-4" style={{minWidth:'260px',maxWidth:'400px'}} autoComplete="off" onSubmit={e => {e.preventDefault(); alert('Solicitação enviada! Em breve entraremos em contato.')}}>
+            <label className="text-gray-700 font-medium">Nome
+              <input type="text" name="nome" required className="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Seu nome" />
+            </label>
+            <label className="text-gray-700 font-medium">E-mail
+              <input type="email" name="email" required className="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="seu@email.com" />
+            </label>
+            <label className="text-gray-700 font-medium">Telefone
+              <input type="tel" name="telefone" required className="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="(00) 00000-0000" />
+            </label>
+            <label className="text-gray-700 font-medium">Nome do Restaurante
+              <input type="text" name="restaurante" required className="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Nome do restaurante" />
+            </label>
+            <button type="submit" className="mt-2 bg-gradient-to-r from-green-600 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:from-green-700 hover:to-purple-700 transition-all shadow-lg">
+              Quero testar grátis por 10 dias
+            </button>
+          </form>
+        </div>
+      </section>
       <header className="bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center">
