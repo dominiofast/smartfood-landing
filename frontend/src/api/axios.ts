@@ -1,7 +1,16 @@
-import axios from 'axios';
+import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+
+// Declarar process.env para TypeScript
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv {
+      REACT_APP_API_URL?: string;
+    }
+  }
+}
 
 // Função para determinar a URL base da API
-const getApiBaseUrl = () => {
+const getApiBaseUrl = (): string => {
   // Em produção (Netlify), usamos as funções Netlify
   if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
     return '/.netlify/functions';
@@ -19,24 +28,24 @@ const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use(
-  (config) => {
+  (config: AxiosRequestConfig): AxiosRequestConfig => {
     const token = localStorage.getItem('token');
-    if (token) {
+    if (token && config.headers) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  (error: AxiosError): Promise<AxiosError> => {
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => {
+  (response: AxiosResponse): AxiosResponse => {
     return response;
   },
-  (error) => {
+  (error: AxiosError): Promise<AxiosError> => {
     if (error.response?.status === 401) {
       // Unauthorized - redirect to login
       localStorage.removeItem('token');
