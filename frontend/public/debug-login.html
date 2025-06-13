@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Login SmartFood</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1, h2 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        pre {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .info {
+            margin-bottom: 20px;
+        }
+        .panel {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .panel h2 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Debug Login SmartFood</h1>
+    
+    <div class="info">
+        <p>Esta página permite debugar o processo de login completo, incluindo o fluxo do frontend.</p>
+    </div>
+    
+    <div class="panel">
+        <h2>1. Verificar Ambiente</h2>
+        <button id="checkEnvBtn">Verificar Ambiente</button>
+        <pre id="envResult">Os resultados aparecerão aqui...</pre>
+    </div>
+    
+    <div class="panel">
+        <h2>2. Verificar Token Atual</h2>
+        <button id="checkTokenBtn">Verificar Token</button>
+        <pre id="tokenResult">Os resultados aparecerão aqui...</pre>
+    </div>
+    
+    <div class="panel">
+        <h2>3. Testar Login Completo</h2>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="admin@dominiotech.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Senha:</label>
+            <input type="password" id="password" value="SuperAdmin@123">
+        </div>
+        
+        <button id="loginBtn">Testar Login</button>
+        <pre id="loginResult">Os resultados aparecerão aqui...</pre>
+    </div>
+    
+    <div class="panel">
+        <h2>4. Simular Redirecionamento</h2>
+        <button id="simulateRedirectBtn">Simular Redirecionamento</button>
+        <pre id="redirectResult">Os resultados aparecerão aqui...</pre>
+    </div>
+
+    <script>
+        // Verificar ambiente
+        document.getElementById('checkEnvBtn').addEventListener('click', () => {
+            const envResult = document.getElementById('envResult');
+            
+            try {
+                const envInfo = {
+                    hostname: window.location.hostname,
+                    protocol: window.location.protocol,
+                    pathname: window.location.pathname,
+                    href: window.location.href,
+                    apiBaseUrl: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+                        ? '/.netlify/functions' 
+                        : 'http://localhost:5000/api',
+                    loginEndpoint: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+                        ? '/.netlify/functions/auth-login' 
+                        : '/auth/login',
+                    hasLocalStorage: typeof localStorage !== 'undefined',
+                    userAgent: navigator.userAgent
+                };
+                
+                envResult.innerHTML = JSON.stringify(envInfo, null, 2);
+            } catch (error) {
+                envResult.innerHTML = `<span class="error">Erro ao verificar ambiente: ${error.message}</span>`;
+            }
+        });
+        
+        // Verificar token atual
+        document.getElementById('checkTokenBtn').addEventListener('click', () => {
+            const tokenResult = document.getElementById('tokenResult');
+            
+            try {
+                const token = localStorage.getItem('token');
+                
+                if (token) {
+                    // Decodificar o token JWT (sem validação)
+                    const parts = token.split('.');
+                    if (parts.length === 3) {
+                        const header = JSON.parse(atob(parts[0]));
+                        const payload = JSON.parse(atob(parts[1]));
+                        
+                        const tokenInfo = {
+                            valid: true,
+                            header,
+                            payload,
+                            expiresAt: new Date(payload.exp * 1000).toLocaleString(),
+                            isExpired: Date.now() > payload.exp * 1000
+                        };
+                        
+                        tokenResult.innerHTML = JSON.stringify(tokenInfo, null, 2);
+                    } else {
+                        tokenResult.innerHTML = `<span class="error">Token inválido: ${token}</span>`;
+                    }
+                } else {
+                    tokenResult.innerHTML = '<span class="info">Nenhum token encontrado no localStorage</span>';
+                }
+            } catch (error) {
+                tokenResult.innerHTML = `<span class="error">Erro ao verificar token: ${error.message}</span>`;
+            }
+        });
+        
+        // Testar login completo
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const loginResult = document.getElementById('loginResult');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            loginResult.innerHTML = 'Testando login...';
+            
+            try {
+                // Determinar o endpoint correto
+                const loginEndpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+                    ? '/.netlify/functions/auth-login' 
+                    : '/auth/login';
+                
+                // Fazer a requisição de login
+                const startTime = Date.now();
+                const response = await fetch(loginEndpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                const endTime = Date.now();
+                
+                const data = await response.json();
+                
+                // Processar a resposta
+                if (response.ok && data.success) {
+                    // Simular o comportamento do AuthContext.tsx
+                    localStorage.setItem('token', data.token);
+                    
+                    loginResult.innerHTML = `<span class="success">✓ Login bem-sucedido em ${endTime - startTime}ms!</span>\n\n`;
+                    loginResult.innerHTML += `Token armazenado no localStorage.\n\n`;
+                    loginResult.innerHTML += `Usuário: ${data.user.name} (${data.user.role})\n\n`;
+                    loginResult.innerHTML += JSON.stringify(data, null, 2);
+                } else {
+                    loginResult.innerHTML = `<span class="error">✗ Erro no login! Status: ${response.status}</span>\n\n`;
+                    loginResult.innerHTML += JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                loginResult.innerHTML = `<span class="error">Erro ao testar login: ${error.message}</span>`;
+            }
+        });
+        
+        // Simular redirecionamento
+        document.getElementById('simulateRedirectBtn').addEventListener('click', () => {
+            const redirectResult = document.getElementById('redirectResult');
+            
+            try {
+                const token = localStorage.getItem('token');
+                
+                if (!token) {
+                    redirectResult.innerHTML = '<span class="error">Nenhum token encontrado. Faça login primeiro.</span>';
+                    return;
+                }
+                
+                // Decodificar o token para obter o papel do usuário
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    redirectResult.innerHTML = '<span class="error">Token inválido.</span>';
+                    return;
+                }
+                
+                const payload = JSON.parse(atob(parts[1]));
+                const role = payload.role;
+                
+                // Determinar para onde redirecionar com base no papel
+                let redirectTo = '/dashboard';
+                
+                if (role === 'superadmin') {
+                    redirectTo = '/superadmin';
+                } else if (role === 'manager') {
+                    redirectTo = '/manager';
+                }
+                
+                redirectResult.innerHTML = `<span class="success">Redirecionamento simulado para: ${redirectTo}</span>\n\n`;
+                redirectResult.innerHTML += `Papel do usuário: ${role}\n\n`;
+                redirectResult.innerHTML += `URL completa: ${window.location.origin}${redirectTo}\n\n`;
+                redirectResult.innerHTML += `Para testar o redirecionamento real, clique no link abaixo:\n`;
+                redirectResult.innerHTML += `<a href="${redirectTo}" target="_blank">${redirectTo}</a>`;
+            } catch (error) {
+                redirectResult.innerHTML = `<span class="error">Erro ao simular redirecionamento: ${error.message}</span>`;
+            }
+        });
+    </script>
+</body>
+</html>
