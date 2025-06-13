@@ -19,68 +19,68 @@ import Layout from './components/Layout';
 
 function App() {
   return (
-    <AuthProvider>
+    <Router>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 4000,
+          style: {
+            background: '#363636',
+            color: '#fff',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#10b981',
+              secondary: '#fff',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
+      
+      <AuthProvider>
         <AIProvider>
-          <Router>
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#363636',
-                  color: '#fff',
-                },
-                success: {
-                  duration: 3000,
-                  iconTheme: {
-                    primary: '#10b981',
-                    secondary: '#fff',
-                  },
-                },
-                error: {
-                  duration: 4000,
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#fff',
-                  },
-                },
-              }}
-            />
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
             
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/login" element={<Login />} />
-              
-              {/* Protected Routes */}
-              <Route element={<ProtectedRoute />}>
-                <Route element={<Layout />}>
-                  {/* SuperAdmin Routes */}
-                  <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']} />}>
-                    <Route index element={<SuperAdminDashboard />} />
-                    <Route path="stores" element={<StoreManagement />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="ai-assistant" element={<AIAssistant />} />
-                    <Route path="reports" element={<Reports />} />
-                  </Route>
-                  
-                  {/* Manager Routes */}
-                  <Route path="/manager" element={<ProtectedRoute allowedRoles={['manager', 'superadmin']} />}>
-                    <Route index element={<ManagerDashboard />} />
-                    <Route path="store" element={<StoreManagement />} />
-                    <Route path="users" element={<UserManagement />} />
-                    <Route path="ai-assistant" element={<AIAssistant />} />
-                    <Route path="reports" element={<Reports />} />
-                  </Route>
+            {/* Protected Routes */}
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                {/* SuperAdmin Routes */}
+                <Route path="/superadmin" element={<ProtectedRoute allowedRoles={['superadmin']} />}>
+                  <Route index element={<SuperAdminDashboard />} />
+                  <Route path="stores" element={<StoreManagement />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="ai-assistant" element={<AIAssistant />} />
+                  <Route path="reports" element={<Reports />} />
+                </Route>
+                
+                {/* Manager Routes */}
+                <Route path="/manager" element={<ProtectedRoute allowedRoles={['manager', 'superadmin']} />}>
+                  <Route index element={<ManagerDashboard />} />
+                  <Route path="store" element={<StoreManagement />} />
+                  <Route path="users" element={<UserManagement />} />
+                  <Route path="ai-assistant" element={<AIAssistant />} />
+                  <Route path="reports" element={<Reports />} />
                 </Route>
               </Route>
-              
-              {/* Default Redirect */}
-              <Route path="/" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Router>
+            </Route>
+            
+            {/* Default Redirect */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+          </Routes>
         </AIProvider>
       </AuthProvider>
+    </Router>
   );
 }
 
-export default App; 
+export default App;
