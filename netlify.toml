@@ -1,0 +1,29 @@
+[build]
+  command = "npm run build"
+  functions = "netlify/functions"
+  publish = "frontend/build"
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirects for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# API redirects to Netlify Functions
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[functions]
+  node_bundler = "esbuild"
+
+# Environment variables template
+[template.environment]
+  DATABASE_URL = "postgresql://user:password@host/database"
+  JWT_SECRET = "your-secret-key"
+  OPENAI_API_KEY = "your-openai-key"
+  NODE_ENV = "production" 
