@@ -14,6 +14,33 @@
     </script>
 </head>
 <body class="bg-white">
+    <!-- Formulário de Teste Grátis 10 Dias -->
+    <section class="w-full bg-gradient-to-r from-green-600 to-purple-600 py-10">
+        <div class="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div class="md:w-1/2 text-white mb-8 md:mb-0">
+                <h2 class="text-3xl md:text-4xl font-bold mb-4">Teste grátis por 10 dias!</h2>
+                <p class="text-lg opacity-90 mb-2">Experimente todas as funcionalidades sem compromisso.</p>
+                <p class="text-sm opacity-80">Preencha o formulário ao lado e comece agora mesmo.</p>
+            </div>
+            <form class="md:w-1/2 bg-white rounded-xl shadow-lg p-6 md:p-8 flex flex-col gap-4" style="min-width:260px;max-width:400px" autocomplete="off">
+                <label class="text-gray-700 font-medium">Nome
+                    <input type="text" name="nome" required class="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Seu nome" />
+                </label>
+                <label class="text-gray-700 font-medium">E-mail
+                    <input type="email" name="email" required class="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="seu@email.com" />
+                </label>
+                <label class="text-gray-700 font-medium">Telefone
+                    <input type="tel" name="telefone" required class="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="(00) 00000-0000" />
+                </label>
+                <label class="text-gray-700 font-medium">Nome do Restaurante
+                    <input type="text" name="restaurante" required class="mt-1 w-full px-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="Nome do restaurante" />
+                </label>
+                <button type="submit" class="mt-2 bg-gradient-to-r from-green-600 to-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:from-green-700 hover:to-purple-700 transition-all shadow-lg">
+                    Quero testar grátis por 10 dias
+                </button>
+            </form>
+        </div>
+    </section>
     <!-- Header -->
     <header class="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-gray-100">
         <div class="container mx-auto px-4 py-4">
