@@ -1,7 +1,17 @@
 import axios from 'axios';
 
+// Função para determinar a URL base da API
+const getApiBaseUrl = () => {
+  // Em produção (Netlify), usamos as funções Netlify
+  if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return '/.netlify/functions';
+  }
+  // Em desenvolvimento local
+  return process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+};
+
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

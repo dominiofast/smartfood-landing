@@ -3,7 +3,12 @@ import { User, LoginCredentials, AuthResponse } from '../types';
 
 class AuthService {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/login', credentials);
+    // Verificar se estamos em produção (Netlify) ou desenvolvimento local
+    const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+      ? 'auth-login' 
+      : '/auth/login';
+    
+    const response = await api.post<AuthResponse>(endpoint, credentials);
     return response.data;
   }
 

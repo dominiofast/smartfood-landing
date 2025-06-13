@@ -1,5 +1,49 @@
 const bcrypt = require('bcryptjs');
-const { query, transaction } = require('./utils/db');
+const { Pool } = require('pg');
+
+// Usar a string de conexão fornecida se a variável de ambiente não estiver disponível
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_aj6KdeGg4QiO@ep-hidden-snow-acgh5ii5-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require';
+
+// Criar pool de conexão
+const pool = new Pool({
+  connectionString: DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  },
+  connectionTimeoutMillis: 5000,
+  idleTimeoutMillis: 30000,
+  max: 10
+});
+
+// Query helper
+const query = async (text, params) => {
+  const start = Date.now();
+  try {
+    const res = await pool.query(text, params);
+    const duration = Date.now() - start;
+    console.log('Query executed', { text, duration, rows: res.rowCount });
+    return res;
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  }
+};
+
+// Transaction helper
+const transaction = async (callback) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const result = await callback(client);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+};
 
 exports.handler = async (event, context) => {
   // Apenas permitir POST
