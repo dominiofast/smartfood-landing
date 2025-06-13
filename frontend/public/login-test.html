@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login SmartFood</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        .error {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .info {
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f8f9fa;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Login SmartFood</h1>
+    
+    <div class="info">
+        <p>Esta página permite testar o login diretamente com a função Netlify e diagnosticar problemas.</p>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" data-tab="direct-test">Teste Direto da API</div>
+        <div class="tab" data-tab="debug-info">Informações de Debug</div>
+    </div>
+    
+    <div id="direct-test" class="tab-content active">
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="admin@dominiotech.com">
+        </div>
+        
+        <div class="form-group">
+            <label for="password">Senha:</label>
+            <input type="password" id="password" value="SuperAdmin@123">
+        </div>
+        
+        <button id="loginBtn">Testar Login</button>
+        
+        <div id="result">Os resultados aparecerão aqui...</div>
+    </div>
+    
+    <div id="debug-info" class="tab-content">
+        <button id="checkDbBtn">Verificar Banco de Dados</button>
+        <button id="testAuthFunctionBtn">Testar Função de Autenticação</button>
+        <button id="checkEnvironmentBtn">Verificar Ambiente</button>
+        
+        <div id="debugResult">Os resultados de debug aparecerão aqui...</div>
+    </div>
+
+    <script>
+        // Função para alternar entre as abas
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                // Remover classe active de todas as abas
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                // Adicionar classe active à aba clicada
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.tab).classList.add('active');
+            });
+        });
+        
+        // Teste direto da API de login
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result');
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            resultDiv.innerHTML = 'Testando login...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/auth-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = '<span class="success">✓ Login bem-sucedido!</span>\n\n' + JSON.stringify(data, null, 2);
+                } else {
+                    resultDiv.innerHTML = '<span class="error">✗ Erro no login!</span>\n\n' + JSON.stringify(data, null, 2);
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<span class="error">Erro ao testar login: ${error.message}</span>`;
+            }
+        });
+        
+        // Verificar banco de dados
+        document.getElementById('checkDbBtn').addEventListener('click', async () => {
+            const debugResult = document.getElementById('debugResult');
+            debugResult.innerHTML = 'Verificando banco de dados...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/diagnose-db');
+                const data = await response.json();
+                
+                debugResult.innerHTML = JSON.stringify(data, null, 2);
+            } catch (error) {
+                debugResult.innerHTML = `<span class="error">Erro ao verificar banco de dados: ${error.message}</span>`;
+            }
+        });
+        
+        // Testar função de autenticação
+        document.getElementById('testAuthFunctionBtn').addEventListener('click', async () => {
+            const debugResult = document.getElementById('debugResult');
+            debugResult.innerHTML = 'Testando função de autenticação...';
+            
+            try {
+                const response = await fetch('/.netlify/functions/auth-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        email: 'admin@dominiotech.com', 
+                        password: 'SuperAdmin@123'
+                    })
+                });
+                
+                const status = response.status;
+                let data;
+                
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    data = { error: 'Não foi possível analisar a resposta como JSON' };
+                }
+                
+                debugResult.innerHTML = `Status: ${status}\n\n` + JSON.stringify(data, null, 2);
+            } catch (error) {
+                debugResult.innerHTML = `<span class="error">Erro ao testar função de autenticação: ${error.message}</span>`;
+            }
+        });
+        
+        // Verificar ambiente
+        document.getElementById('checkEnvironmentBtn').addEventListener('click', () => {
+            const debugResult = document.getElementById('debugResult');
+            
+            const envInfo = {
+                hostname: window.location.hostname,
+                protocol: window.location.protocol,
+                pathname: window.location.pathname,
+                href: window.location.href,
+                apiBaseUrl: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+                    ? '/.netlify/functions' 
+                    : 'http://localhost:5000/api',
+                loginEndpoint: window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+                    ? '/.netlify/functions/auth-login' 
+                    : '/auth/login',
+                hasToken: !!localStorage.getItem('token')
+            };
+            
+            debugResult.innerHTML = JSON.stringify(envInfo, null, 2);
+        });
+    </script>
+</body>
+</html>
