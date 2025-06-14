@@ -5,8 +5,8 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useAuth } from '../contexts/AuthContext';
 import { LoginCredentials } from '../types';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { SparklesIcon } from '@heroicons/react/24/solid';
+import { EyeIcon, EyeSlashIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { SparklesIcon, ChartBarIcon, CpuChipIcon, ShieldCheckIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/solid';
 
 const schema = yup.object({
   email: yup.string().email('Email inválido').required('Email é obrigatório'),
@@ -38,25 +38,29 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-purple-50 flex items-center justify-center px-4">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="max-w-md w-full"
-      >
-        <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-xl p-8 border border-white/20">
-          <div className="text-center mb-8">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-              className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary-600 to-purple-600 rounded-2xl mb-4"
-            >
-              <SparklesIcon className="w-8 h-8 text-white" />
-            </motion.div>
-            <h2 className="text-3xl font-bold gradient-text mb-2">DomínioTech AI</h2>
-            <p className="text-gray-600">Gestão inteligente para seu restaurante</p>
+    <div className="min-h-screen bg-gradient-to-br from-primary-900 to-primary-700 flex items-center justify-center p-4 md:p-0">
+      <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+        {/* Lado esquerdo - Formulário de login */}
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full md:w-1/2 p-8 md:p-12"
+        >
+          <div className="mb-8">
+            <div className="flex items-center mb-6">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                className="flex items-center justify-center w-12 h-12 bg-primary-600 rounded-xl mr-4"
+              >
+                <SparklesIcon className="w-6 h-6 text-white" />
+              </motion.div>
+              <h1 className="text-2xl font-bold text-gray-800">DomínioTech</h1>
+            </div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Bem-vindo de volta!</h2>
+            <p className="text-gray-600">Acesse sua conta para gerenciar seu restaurante</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
