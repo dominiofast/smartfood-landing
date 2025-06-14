@@ -112,9 +112,9 @@ export default function Login() {
                 />
                 <span className="ml-2 text-sm text-gray-600">Lembrar de mim</span>
               </label>
-              <a href="#" className="text-sm text-primary-600 hover:text-primary-700">
+              <button type="button" className="text-sm text-primary-600 hover:text-primary-700">
                 Esqueceu a senha?
-              </a>
+              </button>
             </div>
 
             <motion.button

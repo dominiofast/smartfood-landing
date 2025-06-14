@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { 
   PlusIcon, 
   PencilSquareIcon, 
@@ -24,12 +29,12 @@ const storeSchema = yup.object({
   zip_code: yup.string().required('CEP é obrigatório'),
   phone: yup.string().required('Telefone é obrigatório'),
   email: yup.string().email('Email inválido').required('Email é obrigatório'),
-  logo_url: yup.string().url('URL inválida').nullable(),
-  manager_name: yup.string().nullable(),
-  manager_email: yup.string().email('Email inválido').nullable(),
-  manager_phone: yup.string().nullable(),
-  opening_hours: yup.string().nullable(),
-  description: yup.string().nullable(),
+  logo_url: yup.string().url('URL inválida').optional().nullable(),
+  manager_name: yup.string().optional().nullable(),
+  manager_email: yup.string().email('Email inválido').optional().nullable(),
+  manager_phone: yup.string().optional().nullable(),
+  opening_hours: yup.string().optional().nullable(),
+  description: yup.string().optional().nullable(),
   status: yup.string().oneOf(['active', 'inactive', 'pending'], 'Status inválido').required('Status é obrigatório'),
 });
 
@@ -67,7 +72,11 @@ const ESTADOS_BRASILEIROS = [
 ];
 
 // Tipo para Store com todos os campos necessários
-type StoreExtended = Store;
+type StoreExtended = Store & {
+  total_sales?: number;
+  total_orders?: number;
+  active_users?: number;
+};
 
 export default function StoresManagement() {
   const { user } = useAuth();
@@ -79,15 +88,6 @@ export default function StoresManagement() {
   const [storeToDelete, setStoreToDelete] = useState<StoreExtended | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredStores, setFilteredStores] = useState<StoreExtended[]>([]);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<string>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<StoreExtended | null>(null);
-  const [showStoreDetails, setShowStoreDetails] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'info' | 'stats' | 'users'>('info');
-  const [exportLoading, setExportLoading] = useState(false);
 
   const {
     register,
@@ -108,7 +108,7 @@ export default function StoresManagement() {
     loadStores();
   }, []);
 
-  // Aplicar filtros e ordenação às lojas
+  // Aplicar filtros de busca
   useEffect(() => {
     let filtered = [...stores];
     
@@ -122,50 +122,8 @@ export default function StoresManagement() {
       );
     }
     
-    // Aplicar filtro de status
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(store => store.status === statusFilter);
-    }
-    
-    // Aplicar ordenação
-    filtered.sort((a, b) => {
-      let valueA, valueB;
-      
-      switch (sortBy) {
-        case 'name':
-          valueA = a.name.toLowerCase();
-          valueB = b.name.toLowerCase();
-          break;
-        case 'city':
-          valueA = (a.city || '').toLowerCase();
-          valueB = (b.city || '').toLowerCase();
-          break;
-        case 'total_sales':
-          valueA = a.total_sales || 0;
-          valueB = b.total_sales || 0;
-          break;
-        case 'total_orders':
-          valueA = a.total_orders || 0;
-          valueB = b.total_orders || 0;
-          break;
-        case 'created_at':
-          valueA = new Date(a.created_at || '').getTime();
-          valueB = new Date(b.created_at || '').getTime();
-          break;
-        default:
-          valueA = a.name.toLowerCase();
-          valueB = b.name.toLowerCase();
-      }
-      
-      if (sortOrder === 'asc') {
-        return valueA > valueB ? 1 : -1;
-      } else {
-        return valueA < valueB ? 1 : -1;
-      }
-    });
-    
     setFilteredStores(filtered);
-  }, [searchTerm, statusFilter, sortBy, sortOrder, stores]);
+  }, [searchTerm, stores]);
 
   // Função para carregar lojas
   const loadStores = async () => {
@@ -187,9 +145,9 @@ export default function StoresManagement() {
         status: store.status || 'active',
         created_at: store.created_at || new Date().toISOString(),
         updated_at: store.updated_at || new Date().toISOString(),
-        total_sales: store.total_sales || Math.floor(Math.random() * 100000), // Dados de exemplo
-        total_orders: store.total_orders || Math.floor(Math.random() * 1000), // Dados de exemplo
-        active_users: store.active_users || Math.floor(Math.random() * 50) // Dados de exemplo
+        total_sales: store.total_sales || Math.floor(Math.random() * 100000),
+        total_orders: store.total_orders || Math.floor(Math.random() * 1000),
+        active_users: store.active_users || Math.floor(Math.random() * 50)
       }));
       
       setStores(extendedData);
@@ -202,6 +160,7 @@ export default function StoresManagement() {
     }
   };
 
+  // Abrir modal para criar nova loja
   const openCreateModal = () => {
     setCurrentStore(null);
     reset({
@@ -223,99 +182,38 @@ export default function StoresManagement() {
     setIsModalOpen(true);
   };
 
-  // Abrir modal para editar loja existente
+  // Abrir modal para editar loja
   const openEditModal = (store: StoreExtended) => {
     setCurrentStore(store);
-    setValue('name', store.name);
-    setValue('address', store.address || '');
-    setValue('city', store.city || '');
-    setValue('state', store.state || '');
-    setValue('zip_code', store.zip_code || '');
-    setValue('phone', store.phone || '');
-    setValue('email', store.email || '');
-    setValue('logo_url', store.logo_url || '');
-    setValue('manager_name', store.manager_name || '');
-    setValue('manager_email', store.manager_email || '');
-    setValue('manager_phone', store.manager_phone || '');
-    setValue('opening_hours', store.opening_hours || '');
-    setValue('description', store.description || '');
-    setValue('status', store.status);
+    reset({
+      name: store.name,
+      address: store.address || '',
+      city: store.city || '',
+      state: store.state || '',
+      zip_code: store.zip_code || '',
+      phone: store.phone || '',
+      email: store.email || '',
+      logo_url: store.logo_url || '',
+      manager_name: store.manager_name || '',
+      manager_email: store.manager_email || '',
+      manager_phone: store.manager_phone || '',
+      opening_hours: store.opening_hours || '',
+      description: store.description || '',
+      status: store.status
+    });
     setIsModalOpen(true);
   };
 
-  // Abrir modal de detalhes da loja
-  const openStoreDetails = (store: StoreExtended) => {
-    setSelectedStore(store);
-    setShowStoreDetails(true);
-    setCurrentTab('info');
-  };
-
-  // Fechar modal de detalhes da loja
-  const closeStoreDetails = () => {
-    setSelectedStore(null);
-    setShowStoreDetails(false);
-  };
-
-  // Abrir modal de confirmação de exclusão
+  // Abrir confirmação de exclusão
   const openDeleteConfirmation = (store: StoreExtended) => {
     setStoreToDelete(store);
     setIsDeleting(true);
   };
 
-  // Fechar modal de exclusão
+  // Fechar confirmação de exclusão
   const closeDeleteConfirmation = () => {
     setStoreToDelete(null);
     setIsDeleting(false);
-  };
-
-  // Exportar dados das lojas para CSV
-  const exportToCSV = () => {
-    setExportLoading(true);
-    
-    try {
-      // Preparar dados para exportação
-      const csvData = filteredStores.map(store => ({
-        'ID': store.id,
-        'Nome': store.name,
-        'Endereço': store.address || '',
-        'Cidade': store.city || '',
-        'Estado': store.state || '',
-        'CEP': store.zip_code || '',
-        'Telefone': store.phone || '',
-        'Email': store.email || '',
-        'Gerente': store.manager_name || '',
-        'Status': store.status === 'active' ? 'Ativo' : store.status === 'inactive' ? 'Inativo' : 'Pendente',
-        'Vendas Totais': `R$ ${(store.total_sales || 0).toLocaleString('pt-BR')}`,
-        'Total de Pedidos': store.total_orders || 0,
-        'Usuários Ativos': store.active_users || 0,
-        'Criado em': store.created_at ? format(new Date(store.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '',
-      }));
-      
-      // Criar cabeçalho CSV
-      const headers = Object.keys(csvData[0]);
-      const csvContent = [
-        headers.join(','),
-        ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
-      ].join('\n');
-      
-      // Criar blob e link para download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `lojas_${format(new Date(), 'dd-MM-yyyy')}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success('Dados exportados com sucesso!');
-    } catch (error) {
-      console.error('Erro ao exportar dados:', error);
-      toast.error('Erro ao exportar dados');
-    } finally {
-      setExportLoading(false);
-    }
   };
 
   // Enviar formulário (criar ou atualizar loja)
@@ -353,49 +251,84 @@ export default function StoresManagement() {
       toast.error('Erro ao excluir loja');
     }
   };
-  
-  // Renderizar status da loja com cor apropriada
-  const renderStatus = (status: string) => {
-    switch (status) {
-      case 'active':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            Ativo
-          </span>
-        );
-      case 'inactive':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            Inativo
-          </span>
-        );
-      case 'pending':
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            Pendente
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {status}
-          </span>
-        );
+
+  // Exportar dados para CSV
+  const exportToCSV = () => {
+    try {
+      const csvData = filteredStores.map(store => ({
+        'Nome': store.name,
+        'Endereço': store.address || '',
+        'Cidade': store.city || '',
+        'Estado': store.state || '',
+        'CEP': store.zip_code || '',
+        'Telefone': store.phone || '',
+        'Email': store.email || '',
+        'Gerente': store.manager_name || '',
+        'Status': store.status === 'active' ? 'Ativo' : store.status === 'inactive' ? 'Inativo' : 'Pendente',
+        'Vendas Totais': `R$ ${(store.total_sales || 0).toLocaleString('pt-BR')}`,
+        'Total de Pedidos': store.total_orders || 0,
+        'Usuários Ativos': store.active_users || 0,
+        'Criado em': store.created_at ? format(new Date(store.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '',
+      }));
+      
+      // Criar cabeçalho CSV
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
+      ].join('\n');
+      
+      // Criar blob e link para download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `lojas_${format(new Date(), 'dd-MM-yyyy')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Dados exportados com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar dados:', error);
+      toast.error('Erro ao exportar dados');
     }
   };
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Gerencie todas as lojas da plataforma SmartFood
-        </p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={openCreateModal}
-            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center"
-          >
-            <PlusIcon className="w-5 h-5 mr-2" />
-            Nova Loja
-          </motion.button>
+
+  const isSuperAdmin = user?.role === 'superadmin';
+
+  return (
+    <div className="p-6 max-w-7xl mx-auto">
+      {/* Cabeçalho */}
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gerenciamento de Lojas</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Gerencie todas as lojas da plataforma SmartFood
+          </p>
+        </div>
+        {isSuperAdmin && (
+          <div className="flex space-x-3">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={exportToCSV}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center"
+            >
+              <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
+              Exportar CSV
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={openCreateModal}
+              className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center"
+            >
+              <PlusIcon className="w-5 h-5 mr-2" />
+              Nova Loja
+            </motion.button>
+          </div>
         )}
       </div>
 
@@ -443,15 +376,13 @@ export default function StoresManagement() {
               <div className="p-6">
                 <div className="flex justify-between items-start">
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">{store.name}</h3>
-                  {store.is_active ? (
-                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                      Ativo
-                    </span>
-                  ) : (
-                    <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
-                      Inativo
-                    </span>
-                  )}
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    store.status === 'active' ? 'bg-green-100 text-green-800' :
+                    store.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                    'bg-yellow-100 text-yellow-800'
+                  }`}>
+                    {store.status === 'active' ? 'Ativo' : store.status === 'inactive' ? 'Inativo' : 'Pendente'}
+                  </span>
                 </div>
                 
                 {store.logo_url && (
@@ -483,10 +414,12 @@ export default function StoresManagement() {
                       <span className="font-medium">Email:</span> {store.email}
                     </p>
                   )}
-                  <p>
-                    <span className="font-medium">Criado em:</span>{' '}
-                    {new Date(store.created_at).toLocaleDateString()}
-                  </p>
+                  {store.created_at && (
+                    <p>
+                      <span className="font-medium">Criado em:</span>{' '}
+                      {format(new Date(store.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                    </p>
+                  )}
                 </div>
               </div>
               
@@ -519,7 +452,7 @@ export default function StoresManagement() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-md"
+            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
@@ -534,7 +467,7 @@ export default function StoresManagement() {
             </div>
             
             <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-4">
-              <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                     Nome da Loja *
@@ -551,8 +484,23 @@ export default function StoresManagement() {
                 </div>
                 
                 <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    {...register('email')}
+                    type="email"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="email@exemplo.com"
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                  )}
+                </div>
+                
+                <div className="md:col-span-2">
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Endereço
+                    Endereço *
                   </label>
                   <input
                     {...register('address')}
@@ -566,14 +514,64 @@ export default function StoresManagement() {
                 </div>
                 
                 <div>
+                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                    Cidade *
+                  </label>
+                  <input
+                    {...register('city')}
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Cidade"
+                  />
+                  {errors.city && (
+                    <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+                    Estado *
+                  </label>
+                  <select
+                    {...register('state')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Selecione o estado</option>
+                    {ESTADOS_BRASILEIROS.map(estado => (
+                      <option key={estado.sigla} value={estado.sigla}>
+                        {estado.nome}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.state && (
+                    <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-1">
+                    CEP *
+                  </label>
+                  <input
+                    {...register('zip_code')}
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="00000-000"
+                  />
+                  {errors.zip_code && (
+                    <p className="mt-1 text-sm text-red-600">{errors.zip_code.message}</p>
+                  )}
+                </div>
+                
+                <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone
+                    Telefone *
                   </label>
                   <input
                     {...register('phone')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="(00) 00000-0000"
+                    placeholder="(11) 99999-9999"
                   />
                   {errors.phone && (
                     <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
@@ -581,17 +579,19 @@ export default function StoresManagement() {
                 </div>
                 
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
+                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+                    Status *
                   </label>
-                  <input
-                    {...register('email')}
-                    type="email"
+                  <select
+                    {...register('status')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="email@exemplo.com"
-                  />
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                  >
+                    <option value="active">Ativo</option>
+                    <option value="inactive">Inativo</option>
+                    <option value="pending">Pendente</option>
+                  </select>
+                  {errors.status && (
+                    <p className="mt-1 text-sm text-red-600">{errors.status.message}</p>
                   )}
                 </div>
                 
@@ -601,7 +601,7 @@ export default function StoresManagement() {
                   </label>
                   <input
                     {...register('logo_url')}
-                    type="text"
+                    type="url"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="https://exemplo.com/logo.png"
                   />
@@ -611,30 +611,20 @@ export default function StoresManagement() {
                 </div>
               </div>
               
-              <div className="mt-6 flex justify-end space-x-3">
+              <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-md text-sm font-medium flex items-center"
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {isSubmitting ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
-                      Salvando...
-                    </>
-                  ) : (
-                    <>
-                      <CheckIcon className="w-4 h-4 mr-2" />
-                      Salvar
-                    </>
-                  )}
+                  {isSubmitting ? 'Salvando...' : (currentStore ? 'Atualizar' : 'Criar')}
                 </button>
               </div>
             </form>
@@ -648,30 +638,28 @@ export default function StoresManagement() {
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-md"
+            className="bg-white rounded-lg shadow-xl max-w-md w-full"
           >
             <div className="p-6">
-              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-                <TrashIcon className="w-6 h-6 text-red-600" />
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 text-center mb-2">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Confirmar Exclusão
               </h3>
-              <p className="text-gray-500 text-center mb-6">
-                Tem certeza que deseja excluir a loja <strong>{storeToDelete?.name}</strong>? Esta ação não pode ser desfeita.
+              <p className="text-gray-600 mb-6">
+                Tem certeza que deseja excluir a loja "{storeToDelete?.name}"? 
+                Esta ação não pode ser desfeita.
               </p>
-              <div className="flex justify-center space-x-3">
+              <div className="flex justify-end space-x-3">
                 <button
                   onClick={closeDeleteConfirmation}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   onClick={deleteStore}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm font-medium"
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
-                  Sim, Excluir
+                  Excluir
                 </button>
               </div>
             </div>

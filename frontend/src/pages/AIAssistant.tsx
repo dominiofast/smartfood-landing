@@ -10,7 +10,6 @@ import {
   ChartBarIcon,
   LightBulbIcon,
   ArrowTrendingUpIcon,
-  XMarkIcon,
 } from '@heroicons/react/24/outline';
 import { useDropzone } from 'react-dropzone';
 import ReactMarkdown from 'react-markdown';
@@ -24,7 +23,6 @@ export default function AIAssistant() {
     isListening,
     startListening,
     stopListening,
-    analyses,
     insights,
     recommendations,
     refreshInsights,
