@@ -1,27 +1,47 @@
 import api from '../api/axios';
 
 export interface Store {
-  id: number;
+  id: string; // UUID
   name: string;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  zip_code: string | null;
-  phone: string | null;
-  email: string | null;
-  logo_url: string | null;
-  manager_name: string | null;
-  manager_email: string | null;
-  manager_phone: string | null;
-  opening_hours: string | null;
-  description: string | null;
-  status: 'active' | 'inactive' | 'pending';
+  slug: string;
+  description?: string | null;
+  
+  // Address
+  address_street?: string | null;
+  address_number?: string | null;
+  address_complement?: string | null;
+  address_neighborhood?: string | null;
+  address_city?: string | null;
+  address_state?: string | null;
+  address_zip_code?: string | null;
+  
+  // Contact
+  contact_phone: string;
+  contact_whatsapp?: string | null;
+  contact_email: string;
+  
+  // Business
+  business_cnpj?: string | null;
+  business_type: string;
+  
+  // Images
+  images_logo?: string | null;
+  images_cover?: string | null;
+  
+  // Status
   is_active: boolean;
+  created_by: string;
   created_at: string;
   updated_at: string;
-  total_sales?: number;
-  total_orders?: number;
-  active_users?: number;
+  
+  // Campos de compatibilidade (mapeados dos campos do banco)
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  zip_code?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  logo_url?: string | null;
 }
 
 export interface StoreResponse {
@@ -45,7 +65,7 @@ class StoreService {
     return response.data.stores;
   }
 
-  async getStore(id: number): Promise<Store> {
+  async getStore(id: string): Promise<Store> {
     const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
       ? `/.netlify/functions/stores-crud/${id}` 
       : `/api/stores/${id}`;
@@ -54,16 +74,33 @@ class StoreService {
     return response.data.store;
   }
 
-  async createStore(storeData: Partial<Store>): Promise<Store> {
+  async createStore(storeData: { name: string; phone: string; email: string } | Partial<Store>): Promise<Store> {
     const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
       ? '/.netlify/functions/stores-crud' 
       : '/api/stores';
     
-    const response = await api.post<StoreResponse>(endpoint, storeData);
+    // Se for dados básicos, expandir para incluir campos obrigatórios
+    let dataToSend = storeData;
+    if ('name' in storeData && 'phone' in storeData && 'email' in storeData && Object.keys(storeData).length === 3) {
+      dataToSend = {
+        name: storeData.name,
+        phone: storeData.phone,
+        email: storeData.email,
+        address: '',
+        city: '',
+        state: 'SP',
+        zip_code: '00000-000',
+        logo_url: null
+      };
+    }
+    
+    console.log('Enviando dados para API:', dataToSend);
+    
+    const response = await api.post<StoreResponse>(endpoint, dataToSend);
     return response.data.store;
   }
 
-  async updateStore(id: number, storeData: Partial<Store>): Promise<Store> {
+  async updateStore(id: string, storeData: Partial<Store>): Promise<Store> {
     const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
       ? `/.netlify/functions/stores-crud/${id}` 
       : `/api/stores/${id}`;
@@ -72,7 +109,7 @@ class StoreService {
     return response.data.store;
   }
 
-  async deleteStore(id: number): Promise<void> {
+  async deleteStore(id: string): Promise<void> {
     const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
       ? `/.netlify/functions/stores-crud/${id}` 
       : `/api/stores/${id}`;
