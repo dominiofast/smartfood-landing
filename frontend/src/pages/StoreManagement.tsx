@@ -4,39 +4,38 @@ import toast from 'react-hot-toast';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 import { 
   PlusIcon, 
   PencilSquareIcon, 
   TrashIcon, 
   MagnifyingGlassIcon,
   BuildingStorefrontIcon,
-  ArrowDownTrayIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 import { storeService, Store } from '../services/storeService';
 import { useAuth } from '../contexts/AuthContext';
 
-// Schema de validação para o formulário de loja
-const storeSchema = yup.object({
+// Schema simplificado para criação de loja
+const createStoreSchema = yup.object({
   name: yup.string().required('Nome da loja é obrigatório'),
-  address: yup.string().required('Endereço da loja é obrigatório'),
-  city: yup.string().required('Cidade é obrigatória'),
-  state: yup.string().required('Estado é obrigatório'),
-  zip_code: yup.string().required('CEP é obrigatório'),
+  phone: yup.string().required('Telefone é obrigatório'),
+  email: yup.string().email('Email inválido').required('Email é obrigatório'),
+});
+
+// Schema completo para edição
+const editStoreSchema = yup.object({
+  name: yup.string().required('Nome da loja é obrigatório'),
+  address: yup.string().optional(),
+  city: yup.string().optional(),
+  state: yup.string().optional(),
+  zip_code: yup.string().optional(),
   phone: yup.string().required('Telefone é obrigatório'),
   email: yup.string().email('Email inválido').required('Email é obrigatório'),
   logo_url: yup.string().url('URL inválida').optional().nullable(),
-  manager_name: yup.string().optional().nullable(),
-  manager_email: yup.string().email('Email inválido').optional().nullable(),
-  manager_phone: yup.string().optional().nullable(),
-  opening_hours: yup.string().optional().nullable(),
-  description: yup.string().optional().nullable(),
-  status: yup.string().oneOf(['active', 'inactive', 'pending'], 'Status inválido').required('Status é obrigatório'),
 });
 
-type StoreFormData = yup.InferType<typeof storeSchema>;
+type CreateStoreFormData = yup.InferType<typeof createStoreSchema>;
+type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
 
 // Constantes para estados brasileiros
 const ESTADOS_BRASILEIROS = [
@@ -69,34 +68,36 @@ const ESTADOS_BRASILEIROS = [
   { sigla: 'TO', nome: 'Tocantins' }
 ];
 
-// Tipo para Store com todos os campos necessários
-type StoreExtended = Store & {
-  total_sales?: number;
-  total_orders?: number;
-  active_users?: number;
-};
-
 export default function StoreManagement() {
   const { user } = useAuth();
-  const [stores, setStores] = useState<StoreExtended[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentStore, setCurrentStore] = useState<StoreExtended | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [currentStore, setCurrentStore] = useState<Store | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [storeToDelete, setStoreToDelete] = useState<StoreExtended | null>(null);
+  const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredStores, setFilteredStores] = useState<StoreExtended[]>([]);
+  const [filteredStores, setFilteredStores] = useState<Store[]>([]);
 
+  // Form para criar loja (campos básicos)
   const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<StoreFormData>({
-    resolver: yupResolver(storeSchema),
-    defaultValues: {
-      status: 'active'
-    }
+    register: registerCreate,
+    handleSubmit: handleSubmitCreate,
+    reset: resetCreate,
+    formState: { errors: errorsCreate, isSubmitting: isSubmittingCreate },
+  } = useForm<CreateStoreFormData>({
+    resolver: yupResolver(createStoreSchema),
+  });
+
+  // Form para editar loja (campos completos)
+  const {
+    register: registerEdit,
+    handleSubmit: handleSubmitEdit,
+    reset: resetEdit,
+    formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
+  } = useForm<EditStoreFormData>({
+    resolver: yupResolver(editStoreSchema),
   });
 
   // Carregar lojas ao iniciar
@@ -108,12 +109,12 @@ export default function StoreManagement() {
   useEffect(() => {
     let filtered = [...stores];
     
-    // Aplicar filtro de busca
     if (searchTerm.trim()) {
       filtered = filtered.filter(store => 
         store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (store.address_street && store.address_street.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (store.address && store.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (store.city && store.city.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (store.contact_email && store.contact_email.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (store.email && store.email.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
@@ -126,28 +127,8 @@ export default function StoreManagement() {
     try {
       setLoading(true);
       const data = await storeService.getStores();
-      
-      // Converter dados para o tipo StoreExtended com valores padrão
-      const extendedData: StoreExtended[] = data.map(store => ({
-        ...store,
-        city: store.city || '',
-        state: store.state || '',
-        zip_code: store.zip_code || '',
-        manager_name: store.manager_name || '',
-        manager_email: store.manager_email || '',
-        manager_phone: store.manager_phone || '',
-        opening_hours: store.opening_hours || '',
-        description: store.description || '',
-        status: store.status || 'active',
-        created_at: store.created_at || new Date().toISOString(),
-        updated_at: store.updated_at || new Date().toISOString(),
-        total_sales: store.total_sales || Math.floor(Math.random() * 100000),
-        total_orders: store.total_orders || Math.floor(Math.random() * 1000),
-        active_users: store.active_users || Math.floor(Math.random() * 50)
-      }));
-      
-      setStores(extendedData);
-      setFilteredStores(extendedData);
+      setStores(data);
+      setFilteredStores(data);
     } catch (error) {
       console.error('Erro ao carregar lojas:', error);
       toast.error('Erro ao carregar lojas');
@@ -158,50 +139,32 @@ export default function StoreManagement() {
 
   // Abrir modal para criar nova loja
   const openCreateModal = () => {
-    setCurrentStore(null);
-    reset({
+    resetCreate({
       name: '',
-      address: '',
-      city: '',
-      state: '',
-      zip_code: '',
       phone: '',
       email: '',
-      logo_url: '',
-      manager_name: '',
-      manager_email: '',
-      manager_phone: '',
-      opening_hours: '',
-      description: '',
-      status: 'active'
     });
-    setIsModalOpen(true);
+    setIsCreateModalOpen(true);
   };
 
   // Abrir modal para editar loja
-  const openEditModal = (store: StoreExtended) => {
+  const openEditModal = (store: Store) => {
     setCurrentStore(store);
-    reset({
+    resetEdit({
       name: store.name,
-      address: store.address || '',
-      city: store.city || '',
-      state: store.state || '',
-      zip_code: store.zip_code || '',
-      phone: store.phone || '',
-      email: store.email || '',
-      logo_url: store.logo_url || '',
-      manager_name: store.manager_name || '',
-      manager_email: store.manager_email || '',
-      manager_phone: store.manager_phone || '',
-      opening_hours: store.opening_hours || '',
-      description: store.description || '',
-      status: store.status
+      address: store.address_street || store.address || '',
+      city: store.address_city || store.city || '',
+      state: store.address_state || store.state || '',
+      zip_code: store.address_zip_code || store.zip_code || '',
+      phone: store.contact_phone || store.phone || '',
+      email: store.contact_email || store.email || '',
+      logo_url: store.images_logo || store.logo_url || '',
     });
-    setIsModalOpen(true);
+    setIsEditModalOpen(true);
   };
 
   // Abrir confirmação de exclusão
-  const openDeleteConfirmation = (store: StoreExtended) => {
+  const openDeleteConfirmation = (store: Store) => {
     setStoreToDelete(store);
     setIsDeleting(true);
   };
@@ -212,24 +175,32 @@ export default function StoreManagement() {
     setIsDeleting(false);
   };
 
-  // Enviar formulário (criar ou atualizar loja)
-  const onSubmit = async (data: StoreFormData) => {
+  // Criar nova loja (apenas dados básicos)
+  const onCreateSubmit = async (data: CreateStoreFormData) => {
     try {
-      if (currentStore) {
-        // Atualizar loja existente
-        await storeService.updateStore(currentStore.id, data);
-        toast.success('Loja atualizada com sucesso');
-      } else {
-        // Criar nova loja
-        await storeService.createStore(data);
-        toast.success('Loja criada com sucesso');
-      }
-      
-      setIsModalOpen(false);
-      loadStores(); // Recarregar lista de lojas
-    } catch (error) {
-      console.error('Erro ao salvar loja:', error);
-      toast.error('Erro ao salvar loja');
+      console.log('Criando loja com dados:', data);
+      await storeService.createStore(data);
+      toast.success('Loja criada com sucesso! Agora você pode editar para adicionar mais informações.');
+      setIsCreateModalOpen(false);
+      loadStores();
+    } catch (error: any) {
+      console.error('Erro ao criar loja:', error);
+      toast.error(error.message || 'Erro ao criar loja');
+    }
+  };
+
+  // Atualizar loja existente
+  const onEditSubmit = async (data: EditStoreFormData) => {
+    if (!currentStore) return;
+    
+    try {
+      await storeService.updateStore(currentStore.id, data);
+      toast.success('Loja atualizada com sucesso');
+      setIsEditModalOpen(false);
+      loadStores();
+    } catch (error: any) {
+      console.error('Erro ao atualizar loja:', error);
+      toast.error(error.message || 'Erro ao atualizar loja');
     }
   };
 
@@ -241,54 +212,10 @@ export default function StoreManagement() {
       await storeService.deleteStore(storeToDelete.id);
       toast.success('Loja excluída com sucesso');
       closeDeleteConfirmation();
-      loadStores(); // Recarregar lista de lojas
-    } catch (error) {
+      loadStores();
+    } catch (error: any) {
       console.error('Erro ao excluir loja:', error);
-      toast.error('Erro ao excluir loja');
-    }
-  };
-
-  // Exportar dados para CSV
-  const exportToCSV = () => {
-    try {
-      const csvData = filteredStores.map(store => ({
-        'Nome': store.name,
-        'Endereço': store.address || '',
-        'Cidade': store.city || '',
-        'Estado': store.state || '',
-        'CEP': store.zip_code || '',
-        'Telefone': store.phone || '',
-        'Email': store.email || '',
-        'Gerente': store.manager_name || '',
-        'Status': store.status === 'active' ? 'Ativo' : store.status === 'inactive' ? 'Inativo' : 'Pendente',
-        'Vendas Totais': `R$ ${(store.total_sales || 0).toLocaleString('pt-BR')}`,
-        'Total de Pedidos': store.total_orders || 0,
-        'Usuários Ativos': store.active_users || 0,
-        'Criado em': store.created_at ? format(new Date(store.created_at), 'dd/MM/yyyy', { locale: ptBR }) : '',
-      }));
-      
-      // Criar cabeçalho CSV
-      const headers = Object.keys(csvData[0]);
-      const csvContent = [
-        headers.join(','),
-        ...csvData.map(row => headers.map(header => `"${row[header as keyof typeof row]}"`).join(','))
-      ].join('\n');
-      
-      // Criar blob e link para download
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `lojas_${format(new Date(), 'dd-MM-yyyy')}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success('Dados exportados com sucesso!');
-    } catch (error) {
-      console.error('Erro ao exportar dados:', error);
-      toast.error('Erro ao exportar dados');
+      toast.error(error.message || 'Erro ao excluir loja');
     }
   };
 
@@ -305,26 +232,15 @@ export default function StoreManagement() {
           </p>
         </div>
         {isSuperAdmin && (
-          <div className="flex space-x-3">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={exportToCSV}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center"
-            >
-              <ArrowDownTrayIcon className="w-5 h-5 mr-2" />
-              Exportar CSV
-            </motion.button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={openCreateModal}
-              className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center"
-            >
-              <PlusIcon className="w-5 h-5 mr-2" />
-              Nova Loja
-            </motion.button>
-          </div>
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={openCreateModal}
+            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" />
+            Nova Loja
+          </motion.button>
         )}
       </div>
 
@@ -370,50 +286,33 @@ export default function StoreManagement() {
               className="bg-white rounded-lg shadow-md overflow-hidden"
             >
               <div className="p-6">
-                <div className="flex justify-between items-start">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{store.name}</h3>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    store.status === 'active' ? 'bg-green-100 text-green-800' :
-                    store.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                    'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {store.status === 'active' ? 'Ativo' : store.status === 'inactive' ? 'Inativo' : 'Pendente'}
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">{store.name}</h3>
+                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
+                    Ativo
                   </span>
                 </div>
                 
-                {store.logo_url && (
-                  <div className="mb-4 h-32 flex items-center justify-center">
-                    <img 
-                      src={store.logo_url} 
-                      alt={`Logo ${store.name}`} 
-                      className="max-h-full max-w-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/150?text=Logo+Indisponível';
-                      }}
-                    />
-                  </div>
-                )}
-                
                 <div className="space-y-2 text-sm text-gray-600">
-                  {store.address && (
+                  {(store.contact_phone || store.phone) && (
                     <p>
-                      <span className="font-medium">Endereço:</span> {store.address}
+                      <span className="font-medium">Telefone:</span> {store.contact_phone || store.phone}
                     </p>
                   )}
-                  {store.phone && (
+                  {(store.contact_email || store.email) && (
                     <p>
-                      <span className="font-medium">Telefone:</span> {store.phone}
+                      <span className="font-medium">Email:</span> {store.contact_email || store.email}
                     </p>
                   )}
-                  {store.email && (
+                  {(store.address_street || store.address) && (
                     <p>
-                      <span className="font-medium">Email:</span> {store.email}
+                      <span className="font-medium">Endereço:</span> {store.address_street || store.address}
                     </p>
                   )}
                   {store.created_at && (
                     <p>
                       <span className="font-medium">Criado em:</span>{' '}
-                      {format(new Date(store.created_at), 'dd/MM/yyyy', { locale: ptBR })}
+                      {new Date(store.created_at).toLocaleDateString('pt-BR')}
                     </p>
                   )}
                 </div>
@@ -424,7 +323,7 @@ export default function StoreManagement() {
                   <button
                     onClick={() => openEditModal(store)}
                     className="text-blue-600 hover:text-blue-800 p-1"
-                    title="Editar"
+                    title="Editar e adicionar mais informações"
                   >
                     <PencilSquareIcon className="w-5 h-5" />
                   </button>
@@ -442,40 +341,55 @@ export default function StoreManagement() {
         </div>
       )}
 
-      {/* Modal para criar/editar loja */}
-      {isModalOpen && (
+      {/* Modal para criar loja (dados básicos) */}
+      {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            className="bg-white rounded-lg shadow-xl w-full max-w-md"
           >
             <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
-                {currentStore ? 'Editar Loja' : 'Nova Loja'}
+                Criar Nova Loja
               </h3>
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => setIsCreateModalOpen(false)}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
             
-            <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmitCreate(onCreateSubmit)} className="px-6 py-4">
+              <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                     Nome da Loja *
                   </label>
                   <input
-                    {...register('name')}
+                    {...registerCreate('name')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Nome da loja"
+                    placeholder="Ex: Restaurante do João"
                   />
-                  {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                  {errorsCreate.name && (
+                    <p className="mt-1 text-sm text-red-600">{errorsCreate.name.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefone *
+                  </label>
+                  <input
+                    {...registerCreate('phone')}
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="(11) 99999-9999"
+                  />
+                  {errorsCreate.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errorsCreate.phone.message}</p>
                   )}
                 </div>
                 
@@ -484,52 +398,127 @@ export default function StoreManagement() {
                     Email *
                   </label>
                   <input
-                    {...register('email')}
+                    {...registerCreate('email')}
                     type="email"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="email@exemplo.com"
+                    placeholder="contato@restaurante.com"
                   />
-                  {errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                  {errorsCreate.email && (
+                    <p className="mt-1 text-sm text-red-600">{errorsCreate.email.message}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-6 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                <p><strong>Dica:</strong> Você pode adicionar mais informações (endereço, logo, etc.) editando a loja após a criação.</p>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingCreate}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {isSubmittingCreate ? 'Criando...' : 'Criar Loja'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal para editar loja (dados completos) */}
+      {isEditModalOpen && currentStore && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Editar Loja: {currentStore.name}
+              </h3>
+              <button
+                onClick={() => setIsEditModalOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitEdit(onEditSubmit)} className="px-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome da Loja *
+                  </label>
+                  <input
+                    {...registerEdit('name')}
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  {errorsEdit.name && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.name.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    {...registerEdit('email')}
+                    type="email"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  {errorsEdit.email && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.email.message}</p>
                   )}
                 </div>
                 
                 <div className="md:col-span-2">
                   <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Endereço *
+                    Endereço
                   </label>
                   <input
-                    {...register('address')}
+                    {...registerEdit('address')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Endereço completo"
+                    placeholder="Rua, número, complemento"
                   />
-                  {errors.address && (
-                    <p className="mt-1 text-sm text-red-600">{errors.address.message}</p>
+                  {errorsEdit.address && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.address.message}</p>
                   )}
                 </div>
                 
                 <div>
                   <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    Cidade *
+                    Cidade
                   </label>
                   <input
-                    {...register('city')}
+                    {...registerEdit('city')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Cidade"
                   />
-                  {errors.city && (
-                    <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
+                  {errorsEdit.city && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.city.message}</p>
                   )}
                 </div>
                 
                 <div>
                   <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                    Estado *
+                    Estado
                   </label>
                   <select
-                    {...register('state')}
+                    {...registerEdit('state')}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="">Selecione o estado</option>
@@ -539,23 +528,23 @@ export default function StoreManagement() {
                       </option>
                     ))}
                   </select>
-                  {errors.state && (
-                    <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
+                  {errorsEdit.state && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.state.message}</p>
                   )}
                 </div>
                 
                 <div>
                   <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-1">
-                    CEP *
+                    CEP
                   </label>
                   <input
-                    {...register('zip_code')}
+                    {...registerEdit('zip_code')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="00000-000"
                   />
-                  {errors.zip_code && (
-                    <p className="mt-1 text-sm text-red-600">{errors.zip_code.message}</p>
+                  {errorsEdit.zip_code && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.zip_code.message}</p>
                   )}
                 </div>
                 
@@ -564,30 +553,12 @@ export default function StoreManagement() {
                     Telefone *
                   </label>
                   <input
-                    {...register('phone')}
+                    {...registerEdit('phone')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="(11) 99999-9999"
                   />
-                  {errors.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
-                    Status *
-                  </label>
-                  <select
-                    {...register('status')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="active">Ativo</option>
-                    <option value="inactive">Inativo</option>
-                    <option value="pending">Pendente</option>
-                  </select>
-                  {errors.status && (
-                    <p className="mt-1 text-sm text-red-600">{errors.status.message}</p>
+                  {errorsEdit.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.phone.message}</p>
                   )}
                 </div>
                 
@@ -596,13 +567,13 @@ export default function StoreManagement() {
                     URL do Logo
                   </label>
                   <input
-                    {...register('logo_url')}
+                    {...registerEdit('logo_url')}
                     type="url"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="https://exemplo.com/logo.png"
                   />
-                  {errors.logo_url && (
-                    <p className="mt-1 text-sm text-red-600">{errors.logo_url.message}</p>
+                  {errorsEdit.logo_url && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.logo_url.message}</p>
                   )}
                 </div>
               </div>
@@ -610,17 +581,17 @@ export default function StoreManagement() {
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => setIsEditModalOpen(false)}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmittingEdit}
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {isSubmitting ? 'Salvando...' : (currentStore ? 'Atualizar' : 'Criar')}
+                  {isSubmittingEdit ? 'Salvando...' : 'Salvar Alterações'}
                 </button>
               </div>
             </form>
@@ -629,7 +600,7 @@ export default function StoreManagement() {
       )}
 
       {/* Modal de confirmação de exclusão */}
-      {isDeleting && (
+      {isDeleting && storeToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -641,7 +612,7 @@ export default function StoreManagement() {
                 Confirmar Exclusão
               </h3>
               <p className="text-gray-600 mb-6">
-                Tem certeza que deseja excluir a loja "{storeToDelete?.name}"? 
+                Tem certeza que deseja excluir a loja "{storeToDelete.name}"? 
                 Esta ação não pode ser desfeita.
               </p>
               <div className="flex justify-end space-x-3">
