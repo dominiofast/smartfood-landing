@@ -122,7 +122,7 @@ exports.handler = async (event, context) => {
         store_id: user.store_id 
       },
       JWT_SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '90d' }
     );
 
     // Remove sensitive data

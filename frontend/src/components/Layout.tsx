@@ -37,7 +37,7 @@ const Layout: React.FC = () => {
       return [
         ...baseItems,
         { name: 'Pedidos', href: '/superadmin/orders', icon: ShoppingBagIcon },
-        { name: 'Cardápio', href: '/superadmin/menu', icon: ClipboardDocumentListIcon },
+        { name: 'Gestor de Cardápio', href: '/superadmin/menu', icon: ClipboardDocumentListIcon },
         { name: 'Gestão de Lojas', href: '/superadmin/stores', icon: BuildingStorefrontIcon },
         { name: 'Usuários', href: '/superadmin/users', icon: UsersIcon },
         { name: 'Assistente IA', href: '/superadmin/ai-assistant', icon: SparklesIcon },
@@ -47,7 +47,7 @@ const Layout: React.FC = () => {
 
     return [
       { name: 'Pedidos', href: '/manager/orders', icon: ShoppingBagIcon },
-      { name: 'Cardápio', href: '/manager/menu', icon: ClipboardDocumentListIcon },
+      { name: 'Gestor de Cardápio', href: '/manager/menu', icon: ClipboardDocumentListIcon },
       { name: 'Minha Loja', href: '/manager/store', icon: BuildingStorefrontIcon },
       { name: 'Equipe', href: '/manager/users', icon: UsersIcon },
       { name: 'Assistente IA', href: '/manager/ai-assistant', icon: SparklesIcon },

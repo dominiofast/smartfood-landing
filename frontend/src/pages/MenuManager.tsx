@@ -10,14 +10,22 @@ import {
   XMarkIcon,
   ChevronDownIcon,
   ChevronRightIcon,
-  ArrowUpTrayIcon
+  ArrowUpTrayIcon,
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
 
 // Tipos
-interface Additional {
+interface AdditionalItem {
   id: number;
   name: string;
   price: number;
+  order: number;
+}
+
+interface AdditionalCategory {
+  id: number;
+  name: string; // Ex: "Bordas", "Molhos", "Extras"
+  items: AdditionalItem[];
   order: number;
 }
 
@@ -28,7 +36,7 @@ interface Product {
   price: number;
   image?: string;
   category_id: number;
-  additionals?: Additional[];
+  additionalCategories?: AdditionalCategory[];
   is_active: boolean;
   order: number;
 }
@@ -59,6 +67,10 @@ export default function MenuManager() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
   const [newAdditionals, setNewAdditionals] = useState<{name: string, price: number}[]>([{ name: '', price: 0 }]);
   const [productImage, setProductImage] = useState<string>('');
+  const [additionalCategoryName, setAdditionalCategoryName] = useState<string>('');
+  const [showCopyModal, setShowCopyModal] = useState(false);
+  const [categoryToCopy, setCategoryToCopy] = useState<AdditionalCategory | null>(null);
+  const [sourceProductId, setSourceProductId] = useState<number | null>(null);
 
   // Dados mockados para demonstração
   useEffect(() => {
@@ -81,9 +93,16 @@ export default function MenuManager() {
               category_id: 1,
               is_active: true,
               order: 1,
-              additionals: [
-                { id: 1, name: 'Borda Recheada', price: 8.00, order: 1 },
-                { id: 2, name: 'Extra Queijo', price: 5.00, order: 2 }
+              additionalCategories: [
+                {
+                  id: 1,
+                  name: 'Bordas',
+                  items: [
+                    { id: 1, name: 'Borda Recheada', price: 8.00, order: 1 },
+                    { id: 2, name: 'Extra Queijo', price: 5.00, order: 2 }
+                  ],
+                  order: 1
+                }
               ]
             },
             {
@@ -94,7 +113,7 @@ export default function MenuManager() {
               category_id: 1,
               is_active: true,
               order: 2,
-              additionals: []
+              additionalCategories: []
             }
           ]
         },
@@ -115,7 +134,7 @@ export default function MenuManager() {
               category_id: 2,
               is_active: true,
               order: 1,
-              additionals: []
+              additionalCategories: []
             }
           ]
         }
@@ -315,89 +334,105 @@ export default function MenuManager() {
                         className="bg-gray-50 rounded-lg p-4 cursor-move hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-start justify-between">
-                          <div className="flex items-start flex-1">
-                            <Bars3Icon className="w-5 h-5 text-gray-400 mr-3 mt-1" />
+                        <div className="flex items-start flex-1">
+                          <Bars3Icon className="w-5 h-5 text-gray-400 mr-3 mt-1" />
                             {product.image ? (
-                              <img 
+                            <img 
                                 src={product.image} 
-                                alt={product.name}
-                                className="w-16 h-16 rounded-lg object-cover mr-4"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
-                                <PhotoIcon className="w-8 h-8 text-gray-400" />
-                              </div>
-                            )}
-                            <div className="flex-1">
-                              <h4 className="font-medium text-gray-900">{product.name}</h4>
-                              <p className="text-sm text-gray-600 mt-1">{product.description}</p>
-                              <p className="text-lg font-semibold text-primary-600 mt-2">
-                                {formatCurrency(product.price)}
-                              </p>
+                              alt={product.name}
+                              className="w-16 h-16 rounded-lg object-cover mr-4"
+                            />
+                          ) : (
+                            <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mr-4">
+                              <PhotoIcon className="w-8 h-8 text-gray-400" />
                             </div>
+                          )}
+                          <div className="flex-1">
+                            <h4 className="font-medium text-gray-900">{product.name}</h4>
+                            <p className="text-sm text-gray-600 mt-1">{product.description}</p>
+                            <p className="text-lg font-semibold text-primary-600 mt-2">
+                              {formatCurrency(product.price)}
+                            </p>
                           </div>
-                          <div className="flex items-center space-x-2 ml-4">
-                            <button
-                              onClick={() => {
-                                setEditingProduct(product);
-                                setSelectedCategoryId(product.category_id);
+                        </div>
+                        <div className="flex items-center space-x-2 ml-4">
+                          <button
+                            onClick={() => {
+                              setEditingProduct(product);
+                              setSelectedCategoryId(product.category_id);
                                 setProductImage(product.image || '');
-                                setShowProductModal(true);
-                              }}
-                              className="text-gray-600 hover:text-gray-700"
-                              title="Editar produto"
-                            >
-                              <PencilIcon className="w-5 h-5" />
-                            </button>
-                            <button
-                              className="text-red-600 hover:text-red-700"
-                              title="Excluir produto"
-                            >
-                              <TrashIcon className="w-5 h-5" />
-                            </button>
+                              setShowProductModal(true);
+                            }}
+                            className="text-gray-600 hover:text-gray-700"
+                            title="Editar produto"
+                          >
+                            <PencilIcon className="w-5 h-5" />
+                          </button>
+                          <button
+                            className="text-red-600 hover:text-red-700"
+                            title="Excluir produto"
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
                           </div>
                         </div>
                         
                         {/* Seção de Adicionais */}
                         <div className="mt-4 pt-4 border-t border-gray-200">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-medium text-gray-700">Adicionais</p>
+                            <p className="text-sm font-medium text-gray-700">Categorias de Adicionais</p>
                             <button
                               onClick={() => {
                                 setSelectedProductId(product.id);
                                 setNewAdditionals([{ name: '', price: 0 }]);
+                                setAdditionalCategoryName('');
                                 setShowAdditionalModal(true);
                               }}
                               className="text-primary-600 hover:text-primary-700 flex items-center text-sm"
                             >
                               <PlusIcon className="w-4 h-4 mr-1" />
-                              Adicionar
+                              Nova Categoria
                             </button>
                           </div>
-                          {product.additionals && product.additionals.length > 0 ? (
-                            <div className="space-y-2">
-                              {product.additionals.map((additional) => (
-                                <div
-                                  key={additional.id}
-                                  className="flex items-center justify-between bg-white rounded-lg px-3 py-2"
-                                >
-                                  <div className="flex items-center">
-                                    <TagIcon className="w-4 h-4 text-gray-400 mr-2" />
-                                    <span className="text-sm text-gray-700">{additional.name}</span>
+                          {product.additionalCategories && product.additionalCategories.length > 0 ? (
+                            <div className="space-y-3">
+                              {product.additionalCategories.map((category) => (
+                                <div key={category.id} className="bg-white rounded-lg border border-gray-200 p-3">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center">
+                                      <TagIcon className="w-4 h-4 text-gray-400 mr-2" />
+                                      <span className="text-sm font-medium text-gray-900">{category.name}</span>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <button
+                                        onClick={() => {
+                                          setCategoryToCopy(category);
+                                          setSourceProductId(product.id);
+                                          setShowCopyModal(true);
+                                        }}
+                                        className="text-blue-600 hover:text-blue-700"
+                                        title="Copiar categoria"
+                                      >
+                                        <DocumentDuplicateIcon className="w-4 h-4" />
+                                      </button>
+                                      <button className="text-red-500 hover:text-red-600">
+                                        <TrashIcon className="w-4 h-4" />
+                                      </button>
+                                    </div>
                                   </div>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-medium text-gray-900">
-                                      +{formatCurrency(additional.price)}
-                                    </span>
-                                    <button className="text-red-500 hover:text-red-600">
-                                      <TrashIcon className="w-4 h-4" />
-                                    </button>
+                                  <div className="space-y-1">
+                                    {category.items.map((item) => (
+                                      <div key={item.id} className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">{item.name}</span>
+                                        <span className="text-gray-900 font-medium">+{formatCurrency(item.price)}</span>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-sm text-gray-500 italic">Nenhum adicional cadastrado</p>
+                            <p className="text-sm text-gray-500 italic">Nenhuma categoria de adicional cadastrada</p>
                           )}
                         </div>
                       </div>
@@ -432,7 +467,13 @@ export default function MenuManager() {
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <form className="p-6">
+            <form className="p-6" onSubmit={(e) => {
+              e.preventDefault();
+              // TODO: Implementar lógica de salvar categoria
+              console.log('Salvando categoria...');
+              setShowCategoryModal(false);
+              setEditingCategory(null);
+            }}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nome</label>
@@ -508,7 +549,14 @@ export default function MenuManager() {
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <form className="p-6">
+            <form className="p-6" onSubmit={(e) => {
+              e.preventDefault();
+              // TODO: Implementar lógica de salvar produto
+              console.log('Salvando produto...');
+              setShowProductModal(false);
+              setEditingProduct(null);
+              setProductImage('');
+            }}>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Nome</label>
@@ -558,7 +606,7 @@ export default function MenuManager() {
                       </div>
                     )}
                     <div className="flex-1">
-                      <input
+                  <input
                         type="file"
                         accept="image/*"
                         onChange={(e) => {
@@ -628,23 +676,76 @@ export default function MenuManager() {
           >
             <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4 sticky top-0 bg-white">
               <h3 className="text-lg font-medium text-gray-900">
-                Adicionar Adicionais
+                Nova Categoria de Adicionais
               </h3>
               <button
                 onClick={() => {
                   setShowAdditionalModal(false);
                   setSelectedProductId(null);
                   setNewAdditionals([{ name: '', price: 0 }]);
+                  setAdditionalCategoryName('');
                 }}
                 className="text-gray-400 hover:text-gray-500"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
-            <form className="p-6">
+            <form className="p-6" onSubmit={(e) => {
+              e.preventDefault();
+              
+              if (selectedProductId && additionalCategoryName.trim()) {
+                const newCategories = categories.map(cat => ({
+                  ...cat,
+                  products: cat.products.map(prod => {
+                    if (prod.id === selectedProductId) {
+                      const existingAdditionalCategories = prod.additionalCategories || [];
+                      const maxCategoryId = Math.max(0, ...existingAdditionalCategories.map(c => c.id));
+                      
+                      const newAdditionalCategory: AdditionalCategory = {
+                        id: maxCategoryId + 1,
+                        name: additionalCategoryName,
+                        items: newAdditionals
+                          .filter(a => a.name.trim())
+                          .map((add, index) => ({
+                            id: index + 1,
+                            name: add.name,
+                            price: add.price,
+                            order: index + 1
+                          })),
+                        order: existingAdditionalCategories.length + 1
+                      };
+                      
+                      return {
+                        ...prod,
+                        additionalCategories: [...existingAdditionalCategories, newAdditionalCategory]
+                      };
+                    }
+                    return prod;
+                  })
+                }));
+                setCategories(newCategories);
+              }
+              
+              setShowAdditionalModal(false);
+              setSelectedProductId(null);
+              setNewAdditionals([{ name: '', price: 0 }]);
+              setAdditionalCategoryName('');
+            }}>
               <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Nome da Categoria</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    placeholder="Ex: Bordas, Molhos, Extras"
+                    value={additionalCategoryName}
+                    onChange={(e) => setAdditionalCategoryName(e.target.value)}
+                    required
+                  />
+                </div>
+                
                 <p className="text-sm text-gray-600">
-                  Adicione múltiplos adicionais de uma vez. Ex: Borda Recheada, Extra Queijo, etc.
+                  Adicione os itens desta categoria:
                 </p>
                 
                 {newAdditionals.map((additional, index) => (
@@ -664,40 +765,40 @@ export default function MenuManager() {
                       )}
                     </div>
                     <div className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Nome</label>
-                        <input
-                          type="text"
-                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                          placeholder="Ex: Borda Recheada"
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Nome</label>
+                  <input
+                    type="text"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    placeholder="Ex: Borda Recheada"
                           value={additional.name}
                           onChange={(e) => {
                             const updated = [...newAdditionals];
                             updated[index].name = e.target.value;
                             setNewAdditionals(updated);
                           }}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700">Preço</label>
-                        <div className="mt-1 relative rounded-md shadow-sm">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span className="text-gray-500 sm:text-sm">R$</span>
-                          </div>
-                          <input
-                            type="number"
-                            step="0.01"
-                            className="pl-12 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                            placeholder="0,00"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Preço</label>
+                  <div className="mt-1 relative rounded-md shadow-sm">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 sm:text-sm">R$</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="0.01"
+                      className="pl-12 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                      placeholder="0,00"
                             value={additional.price}
                             onChange={(e) => {
                               const updated = [...newAdditionals];
                               updated[index].price = parseFloat(e.target.value) || 0;
                               setNewAdditionals(updated);
                             }}
-                          />
-                        </div>
-                      </div>
+                    />
+                  </div>
+                </div>
                     </div>
                   </div>
                 ))}
@@ -721,6 +822,7 @@ export default function MenuManager() {
                     setShowAdditionalModal(false);
                     setSelectedProductId(null);
                     setNewAdditionals([{ name: '', price: 0 }]);
+                    setAdditionalCategoryName('');
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
@@ -730,10 +832,100 @@ export default function MenuManager() {
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700"
                 >
-                  Salvar Adicionais
+                  Salvar Categoria
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal de Copiar Categoria */}
+      {showCopyModal && categoryToCopy && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4 sticky top-0 bg-white">
+              <h3 className="text-lg font-medium text-gray-900">
+                Copiar Categoria "{categoryToCopy.name}"
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCopyModal(false);
+                  setCategoryToCopy(null);
+                  setSourceProductId(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-4">
+                Selecione os produtos para onde deseja copiar esta categoria:
+              </p>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {categories.map(category => (
+                  <div key={category.id}>
+                    <h4 className="font-medium text-gray-900 mb-2">{category.name}</h4>
+                    <div className="space-y-1 ml-4">
+                      {category.products
+                        .filter(p => p.id !== sourceProductId)
+                        .map(product => (
+                          <label key={product.id} className="flex items-center p-2 hover:bg-gray-50 rounded cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="mr-3 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              onChange={(e) => {
+                                if (e.target.checked && categoryToCopy) {
+                                  const newCategories = categories.map(cat => ({
+                                    ...cat,
+                                    products: cat.products.map(prod => {
+                                      if (prod.id === product.id) {
+                                        const existingCategories = prod.additionalCategories || [];
+                                        const maxId = Math.max(0, ...existingCategories.map(c => c.id));
+                                        
+                                        const copiedCategory: AdditionalCategory = {
+                                          ...categoryToCopy,
+                                          id: maxId + 1,
+                                          order: existingCategories.length + 1
+                                        };
+                                        
+                                        return {
+                                          ...prod,
+                                          additionalCategories: [...existingCategories, copiedCategory]
+                                        };
+                                      }
+                                      return prod;
+                                    })
+                                  }));
+                                  setCategories(newCategories);
+                                }
+                              }}
+                            />
+                            <span className="text-sm text-gray-700">{product.name}</span>
+                          </label>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={() => {
+                    setShowCopyModal(false);
+                    setCategoryToCopy(null);
+                    setSourceProductId(null);
+                  }}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700"
+                >
+                  Concluir
+                </button>
+              </div>
+            </div>
           </motion.div>
         </div>
       )}
