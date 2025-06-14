@@ -14,6 +14,7 @@ import AIAssistant from './pages/AIAssistant';
 import Reports from './pages/Reports';
 import Orders from './pages/Orders';
 import MenuManager from './pages/MenuManager';
+import DigitalMenu from './pages/DigitalMenu';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -53,6 +54,7 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/menu" element={<DigitalMenu />} />
             
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>

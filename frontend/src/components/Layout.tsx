@@ -181,6 +181,17 @@ const Layout: React.FC = () => {
               </button>
 
               <div className="flex-1 flex items-center justify-end space-x-4">
+                {/* Cardápio Digital Button */}
+                <a
+                  href="/menu"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  <ClipboardDocumentListIcon className="w-5 h-5" />
+                  <span>Cardápio Digital</span>
+                </a>
+
                 {/* AI Status Indicator */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
