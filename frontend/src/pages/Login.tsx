@@ -41,12 +41,7 @@ export default function Login() {
     <div className="min-h-screen bg-gradient-to-br from-primary-900 to-primary-700 flex items-center justify-center p-4 md:p-0">
       <div className="w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
         {/* Lado esquerdo - Formulário de login */}
-        <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full md:w-1/2 p-8 md:p-12"
-        >
+        <div className="w-full md:w-1/2 p-8 md:p-12">
           <div className="mb-8">
             <div className="flex items-center mb-6">
               <motion.div
@@ -130,7 +125,7 @@ export default function Login() {
               className={`w-full py-3 px-4 rounded-lg font-medium text-white transition-all ${
                 isLoading
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-primary-600 to-purple-600 hover:from-primary-700 hover:to-purple-700'
+                  : 'bg-gradient-to-r from-primary-600 to-secondary-500 hover:from-primary-700 hover:to-secondary-600'
               }`}
             >
               {isLoading ? (
@@ -142,7 +137,9 @@ export default function Login() {
                   Entrando...
                 </span>
               ) : (
-                'Entrar'
+                <span className="flex items-center justify-center">
+                  Entrar <ArrowRightIcon className="w-5 h-5 ml-2" />
+                </span>
               )}
             </motion.button>
           </form>
@@ -160,25 +157,19 @@ export default function Login() {
             <div className="mt-6 grid grid-cols-3 gap-4 text-center">
               <div className="space-y-2">
                 <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center mx-auto">
-                  <svg className="w-6 h-6 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
+                  <ChartBarIcon className="w-6 h-6 text-primary-600" />
                 </div>
                 <p className="text-xs text-gray-600">Análise Inteligente</p>
               </div>
               <div className="space-y-2">
-                <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                  </svg>
+                <div className="w-12 h-12 bg-secondary-100 rounded-lg flex items-center justify-center mx-auto">
+                  <CpuChipIcon className="w-6 h-6 text-secondary-600" />
                 </div>
                 <p className="text-xs text-gray-600">Chat com IA</p>
               </div>
               <div className="space-y-2">
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
+                  <ShieldCheckIcon className="w-6 h-6 text-blue-600" />
                 </div>
                 <p className="text-xs text-gray-600">Insights em Tempo Real</p>
               </div>
@@ -186,10 +177,74 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-center text-sm text-gray-600 mt-8">
-          © 2025 DomínioTech AI. Todos os direitos reservados.
-        </p>
-      </motion.div>
+        {/* Lado direito - Design visual */}
+        <div className="hidden md:block md:w-1/2 bg-gradient-to-br from-primary-800 to-primary-900 p-12 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10">
+            <svg className="w-full h-full" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                  <path d="M 10 0 L 0 0 0 10" fill="none" stroke="white" strokeWidth="0.5" />
+                </pattern>
+              </defs>
+              <rect width="100" height="100" fill="url(#grid)" />
+            </svg>
+          </div>
+          
+          <div className="relative z-10 h-full flex flex-col justify-between">
+            <div>
+              <h2 className="text-4xl font-bold text-white mb-6">Gestão Inteligente para Restaurantes</h2>
+              <p className="text-primary-100 mb-8">
+                Otimize seu negócio com nossa plataforma alimentada por inteligência artificial. 
+                Aumente suas vendas, reduza custos e melhore a experiência do cliente.
+              </p>
+              
+              <div className="space-y-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-secondary-500 rounded-lg p-2 mr-4">
+                    <ChartBarIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-medium mb-1">Análise de Dados</h3>
+                    <p className="text-primary-100 text-sm">
+                      Insights detalhados sobre vendas, estoque e preferências dos clientes
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-secondary-500 rounded-lg p-2 mr-4">
+                    <DevicePhoneMobileIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-medium mb-1">Aplicativo Mobile</h3>
+                    <p className="text-primary-100 text-sm">
+                      Gerencie seu negócio de qualquer lugar com nosso aplicativo intuitivo
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 bg-secondary-500 rounded-lg p-2 mr-4">
+                    <CpuChipIcon className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-white font-medium mb-1">Inteligência Artificial</h3>
+                    <p className="text-primary-100 text-sm">
+                      Recomendações personalizadas baseadas no comportamento dos clientes
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-auto">
+              <p className="text-primary-200 text-sm">
+                © 2025 DomínioTech. Todos os direitos reservados.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-} 
+}
