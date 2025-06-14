@@ -79,7 +79,7 @@ exports.handler = async (event, context) => {
         const pathParts = event.path.split('/');
         const storeId = pathParts[pathParts.length - 1];
         
-        if (storeId && !isNaN(storeId) && storeId !== 'stores-crud') {
+        if (storeId && storeId !== 'stores-crud') {
           // Buscar loja específica
           const result = await query(
             'SELECT * FROM stores WHERE id = $1',
@@ -113,8 +113,18 @@ exports.handler = async (event, context) => {
       
       case 'POST': {
         // Criar nova loja
-        const { name, address, phone, email, logo_url } = JSON.parse(event.body);
+        const { 
+          name, 
+          address, 
+          city, 
+          state, 
+          zip_code, 
+          phone, 
+          email, 
+          logo_url 
+        } = JSON.parse(event.body);
         
+        // Validações básicas
         if (!name) {
           return {
             statusCode: 400,
@@ -123,11 +133,76 @@ exports.handler = async (event, context) => {
           };
         }
         
+        if (!phone) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Telefone é obrigatório' })
+          };
+        }
+        
+        if (!email) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Email é obrigatório' })
+          };
+        }
+
+        // Gerar slug único a partir do nome
+        const slug = name.toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+          .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
+          .replace(/\s+/g, '-') // Substitui espaços por hífens
+          .substring(0, 100);
+
+        // Verificar se já existe um superadmin para usar como created_by
+        const superAdminResult = await query(
+          "SELECT id FROM users WHERE role = 'superadmin' LIMIT 1"
+        );
+
+        if (superAdminResult.rows.length === 0) {
+          return {
+            statusCode: 400,
+            headers,
+            body: JSON.stringify({ error: 'Nenhum superadmin encontrado para criar a loja' })
+          };
+        }
+
+        const createdBy = superAdminResult.rows[0].id;
+        
         const result = await query(
-          `INSERT INTO stores (name, address, phone, email, logo_url, is_active, created_at, updated_at)
-           VALUES ($1, $2, $3, $4, $5, true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-           RETURNING *`,
-          [name, address || null, phone || null, email || null, logo_url || null]
+          `INSERT INTO stores (
+            name, 
+            slug,
+            address_street, 
+            address_city, 
+            address_state, 
+            address_zip_code, 
+            contact_phone, 
+            contact_email, 
+            business_type,
+            images_logo,
+            is_active, 
+            created_by, 
+            created_at, 
+            updated_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          RETURNING *`,
+          [
+            name, 
+            slug,
+            address || 'Endereço não informado', 
+            city || 'Cidade não informada', 
+            state || 'SP', 
+            zip_code || '00000-000', 
+            phone, 
+            email, 
+            'restaurant', // Tipo padrão
+            logo_url || null,
+            createdBy
+          ]
         );
         
         return {
@@ -142,11 +217,11 @@ exports.handler = async (event, context) => {
         const pathParts = event.path.split('/');
         const storeId = pathParts[pathParts.length - 1];
         
-        if (!storeId || isNaN(storeId)) {
+        if (!storeId) {
           return {
             statusCode: 400,
             headers,
-            body: JSON.stringify({ error: 'ID da loja não fornecido ou inválido' })
+            body: JSON.stringify({ error: 'ID da loja não fornecido' })
           };
         }
         
@@ -193,11 +268,11 @@ exports.handler = async (event, context) => {
         const pathParts = event.path.split('/');
         const storeId = pathParts[pathParts.length - 1];
         
-        if (!storeId || isNaN(storeId)) {
+        if (!storeId) {
           return {
             statusCode: 400,
             headers,
-            body: JSON.stringify({ error: 'ID da loja não fornecido ou inválido' })
+            body: JSON.stringify({ error: 'ID da loja não fornecido' })
           };
         }
         
