@@ -2,6 +2,17 @@ import api from '../api/axios';
 import { User, LoginCredentials, AuthResponse } from '../types';
 
 class AuthService {
+  // Função para verificar se há token válido
+  isAuthenticated(): boolean {
+    const token = localStorage.getItem('token');
+    return !!token;
+  }
+
+  // Função para obter o token
+  getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
       // Verificar se estamos em produção (Netlify) ou desenvolvimento local
@@ -47,8 +58,45 @@ class AuthService {
   }
 
   async getMe(): Promise<User> {
-    const response = await api.get<{ success: boolean; data: User }>('/auth/me');
-    return response.data.data;
+    try {
+      // Verificar se estamos em produção (Netlify) ou desenvolvimento local
+      const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+        ? '/.netlify/functions/auth-me' 
+        : '/auth/me';
+      
+      console.log('Fazendo getMe em:', endpoint);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+      
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          throw new Error('Token inválido ou expirado');
+        }
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Resposta do getMe:', data);
+      
+      // Retornar o user dependendo da estrutura da resposta
+      return data.data || data.user || data;
+    } catch (error) {
+      console.error('Erro no getMe:', error);
+      throw error;
+    }
   }
 
   async updateProfile(data: Partial<User>): Promise<User> {

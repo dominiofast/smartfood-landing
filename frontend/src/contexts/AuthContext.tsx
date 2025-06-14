@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User, LoginCredentials, AuthResponse } from '../types';
 import { authService } from '../services/authService';
@@ -31,24 +31,81 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    loadUser();
-  }, []);
+  // Função para salvar dados do usuário no localStorage
+  const saveUserToStorage = (userData: User) => {
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
 
-  const loadUser = async () => {
+  // Função para recuperar dados do usuário do localStorage
+  const getUserFromStorage = (): User | null => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch (error) {
+      console.error('Erro ao recuperar usuário do storage:', error);
+      localStorage.removeItem('user');
+      return null;
+    }
+  };
+
+  const loadUser = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Token encontrado:', token ? 'Sim' : 'Não');
+      
       if (token) {
-        const userData = await authService.getMe();
-        setUser(userData);
+        // Primeiro, tenta carregar o usuário do storage local como fallback
+        const cachedUser = getUserFromStorage();
+        if (cachedUser) {
+          console.log('Usuário encontrado no cache local:', cachedUser);
+          setUser(cachedUser);
+        }
+        
+        // Depois tenta atualizar com dados do servidor
+        try {
+          console.log('Tentando carregar dados atualizados do usuário...');
+          const userData = await authService.getMe();
+          console.log('Dados do usuário carregados do servidor:', userData);
+          setUser(userData);
+          saveUserToStorage(userData); // Atualiza o cache
+        } catch (serverError: any) {
+          console.error('Erro ao carregar do servidor:', serverError);
+          
+          // Se falhou no servidor mas temos cache, usa o cache
+          if (cachedUser) {
+            console.log('Usando dados do cache devido ao erro do servidor');
+            // Verifica apenas se o erro é relacionado ao token
+            if (serverError.message?.includes('Token inválido') || serverError.message?.includes('401')) {
+              console.log('Token inválido, removendo tudo do localStorage');
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              setUser(null);
+            }
+          } else {
+            // Sem cache e sem servidor, remove tudo
+            console.log('Sem cache e erro no servidor, removendo token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+          }
+        }
+      } else {
+        console.log('Nenhum token encontrado, usuário não logado');
+        // Remove dados antigos se não há token
+        localStorage.removeItem('user');
       }
-    } catch (error) {
-      console.error('Error loading user:', error);
+    } catch (error: any) {
+      console.error('Erro geral ao carregar usuário:', error);
+      // Em caso de erro geral, limpa tudo
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // useCallback
+
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
 
   const login = async (credentials: LoginCredentials) => {
     try {
@@ -69,8 +126,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.error('Token não encontrado na resposta');
         }
         
-        // Atualizar o estado do usuário
+        // Atualizar o estado do usuário e salvar no cache
         setUser(response.user);
+        saveUserToStorage(response.user);
         
         // Redirect based on role
         if (response.user.role === 'superadmin') {
@@ -96,6 +154,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setUser(null);
     navigate('/login');
     toast.success('Logout realizado com sucesso');
@@ -105,6 +164,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const updatedUser = await authService.updateProfile(data);
       setUser(updatedUser);
+      saveUserToStorage(updatedUser); // Atualiza o cache
       toast.success('Perfil atualizado com sucesso');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Erro ao atualizar perfil');

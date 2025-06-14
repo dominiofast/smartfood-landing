@@ -10,7 +10,10 @@ interface ProtectedRouteProps {
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   const { user, loading } = useAuth();
 
+  console.log('ProtectedRoute - loading:', loading, 'user:', user);
+
   if (loading) {
+    console.log('ProtectedRoute - Ainda carregando...');
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <motion.div
@@ -30,6 +33,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles }) => {
   }
 
   if (!user) {
+    console.log('ProtectedRoute - Usuário não encontrado, redirecionando para login');
     return <Navigate to="/login" replace />;
   }
 
