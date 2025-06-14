@@ -10,94 +10,63 @@ import {
   TrashIcon, 
   MagnifyingGlassIcon,
   BuildingStorefrontIcon,
-  XMarkIcon
+  XMarkIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { storeService, Store } from '../services/storeService';
 import { useAuth } from '../contexts/AuthContext';
 
-// Schema simplificado para criação de loja
+// Interface simplificada para Store
+interface SimpleStore {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  logo_url?: string;
+  is_active?: boolean;
+  created_at?: string;
+  
+  // Campos do banco de dados
+  contact_phone?: string;
+  contact_email?: string;
+  address_street?: string;
+  address_city?: string;
+  address_state?: string;
+  address_zip_code?: string;
+  images_logo?: string;
+}
+
+// Schema para criação de loja
 const createStoreSchema = yup.object({
   name: yup.string().required('Nome da loja é obrigatório'),
   phone: yup.string().required('Telefone é obrigatório'),
   email: yup.string().email('Email inválido').required('Email é obrigatório'),
 });
 
-// Schema completo para edição
-const editStoreSchema = yup.object({
-  name: yup.string().required('Nome da loja é obrigatório'),
-  address: yup.string().optional(),
-  city: yup.string().optional(),
-  state: yup.string().optional(),
-  zip_code: yup.string().optional(),
-  phone: yup.string().required('Telefone é obrigatório'),
-  email: yup.string().email('Email inválido').required('Email é obrigatório'),
-  logo_url: yup.string().url('URL inválida').optional().nullable(),
-});
-
 type CreateStoreFormData = yup.InferType<typeof createStoreSchema>;
-type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
 
-// Constantes para estados brasileiros
-const ESTADOS_BRASILEIROS = [
-  { sigla: 'AC', nome: 'Acre' },
-  { sigla: 'AL', nome: 'Alagoas' },
-  { sigla: 'AP', nome: 'Amapá' },
-  { sigla: 'AM', nome: 'Amazonas' },
-  { sigla: 'BA', nome: 'Bahia' },
-  { sigla: 'CE', nome: 'Ceará' },
-  { sigla: 'DF', nome: 'Distrito Federal' },
-  { sigla: 'ES', nome: 'Espírito Santo' },
-  { sigla: 'GO', nome: 'Goiás' },
-  { sigla: 'MA', nome: 'Maranhão' },
-  { sigla: 'MT', nome: 'Mato Grosso' },
-  { sigla: 'MS', nome: 'Mato Grosso do Sul' },
-  { sigla: 'MG', nome: 'Minas Gerais' },
-  { sigla: 'PA', nome: 'Pará' },
-  { sigla: 'PB', nome: 'Paraíba' },
-  { sigla: 'PR', nome: 'Paraná' },
-  { sigla: 'PE', nome: 'Pernambuco' },
-  { sigla: 'PI', nome: 'Piauí' },
-  { sigla: 'RJ', nome: 'Rio de Janeiro' },
-  { sigla: 'RN', nome: 'Rio Grande do Norte' },
-  { sigla: 'RS', nome: 'Rio Grande do Sul' },
-  { sigla: 'RO', nome: 'Rondônia' },
-  { sigla: 'RR', nome: 'Roraima' },
-  { sigla: 'SC', nome: 'Santa Catarina' },
-  { sigla: 'SP', nome: 'São Paulo' },
-  { sigla: 'SE', nome: 'Sergipe' },
-  { sigla: 'TO', nome: 'Tocantins' }
-];
+
 
 export default function StoreManagement() {
   const { user } = useAuth();
-  const [stores, setStores] = useState<Store[]>([]);
+  const [stores, setStores] = useState<SimpleStore[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [currentStore, setCurrentStore] = useState<Store | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [storeToDelete, setStoreToDelete] = useState<Store | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredStores, setFilteredStores] = useState<Store[]>([]);
+  const [filteredStores, setFilteredStores] = useState<SimpleStore[]>([]);
 
-  // Form para criar loja (campos básicos)
+  // Form para criar loja
   const {
-    register: registerCreate,
-    handleSubmit: handleSubmitCreate,
-    reset: resetCreate,
-    formState: { errors: errorsCreate, isSubmitting: isSubmittingCreate },
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
   } = useForm<CreateStoreFormData>({
     resolver: yupResolver(createStoreSchema),
-  });
-
-  // Form para editar loja (campos completos)
-  const {
-    register: registerEdit,
-    handleSubmit: handleSubmitEdit,
-    reset: resetEdit,
-    formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
-  } = useForm<EditStoreFormData>({
-    resolver: yupResolver(editStoreSchema),
   });
 
   // Carregar lojas ao iniciar
@@ -110,12 +79,15 @@ export default function StoreManagement() {
     let filtered = [...stores];
     
     if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(store => 
-        store.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (store.address_street && store.address_street.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (store.address && store.address.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (store.contact_email && store.contact_email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (store.email && store.email.toLowerCase().includes(searchTerm.toLowerCase()))
+        store.name.toLowerCase().includes(term) ||
+        (store.phone && store.phone.toLowerCase().includes(term)) ||
+        (store.contact_phone && store.contact_phone.toLowerCase().includes(term)) ||
+        (store.email && store.email.toLowerCase().includes(term)) ||
+        (store.contact_email && store.contact_email.toLowerCase().includes(term)) ||
+        (store.address && store.address.toLowerCase().includes(term)) ||
+        (store.address_street && store.address_street.toLowerCase().includes(term))
       );
     }
     
@@ -126,62 +98,83 @@ export default function StoreManagement() {
   const loadStores = async () => {
     try {
       setLoading(true);
-      const data = await storeService.getStores();
-      setStores(data);
-      setFilteredStores(data);
-    } catch (error) {
+      setError(null);
+      
+      // Determinar endpoint baseado no ambiente
+      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      const endpoint = isProduction ? '/.netlify/functions/stores-crud' : '/api/stores';
+      
+      console.log('Carregando lojas do endpoint:', endpoint);
+      
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro HTTP: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Dados recebidos:', data);
+      
+      if (data.success && Array.isArray(data.stores)) {
+        setStores(data.stores);
+        setFilteredStores(data.stores);
+      } else {
+        // Se não há lojas, inicializar com array vazio
+        setStores([]);
+        setFilteredStores([]);
+      }
+    } catch (error: any) {
       console.error('Erro ao carregar lojas:', error);
+      setError(error.message || 'Erro ao carregar lojas');
+      setStores([]);
+      setFilteredStores([]);
       toast.error('Erro ao carregar lojas');
     } finally {
       setLoading(false);
     }
   };
 
-  // Abrir modal para criar nova loja
-  const openCreateModal = () => {
-    resetCreate({
-      name: '',
-      phone: '',
-      email: '',
-    });
-    setIsCreateModalOpen(true);
-  };
-
-  // Abrir modal para editar loja
-  const openEditModal = (store: Store) => {
-    setCurrentStore(store);
-    resetEdit({
-      name: store.name,
-      address: store.address_street || store.address || '',
-      city: store.address_city || store.city || '',
-      state: store.address_state || store.state || '',
-      zip_code: store.address_zip_code || store.zip_code || '',
-      phone: store.contact_phone || store.phone || '',
-      email: store.contact_email || store.email || '',
-      logo_url: store.images_logo || store.logo_url || '',
-    });
-    setIsEditModalOpen(true);
-  };
-
-  // Abrir confirmação de exclusão
-  const openDeleteConfirmation = (store: Store) => {
-    setStoreToDelete(store);
-    setIsDeleting(true);
-  };
-
-  // Fechar confirmação de exclusão
-  const closeDeleteConfirmation = () => {
-    setStoreToDelete(null);
-    setIsDeleting(false);
-  };
-
-  // Criar nova loja (apenas dados básicos)
-  const onCreateSubmit = async (data: CreateStoreFormData) => {
+  // Criar nova loja
+  const onSubmit = async (data: CreateStoreFormData) => {
     try {
       console.log('Criando loja com dados:', data);
-      await storeService.createStore(data);
+      
+      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      const endpoint = isProduction ? '/.netlify/functions/stores-crud' : '/api/stores';
+      
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({
+          name: data.name,
+          phone: data.phone,
+          email: data.email,
+          address: '',
+          city: '',
+          state: 'SP',
+          zip_code: '00000-000',
+          logo_url: null
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Erro ao criar loja');
+      }
+
       toast.success('Loja criada com sucesso! Agora você pode editar para adicionar mais informações.');
       setIsCreateModalOpen(false);
+      reset();
       loadStores();
     } catch (error: any) {
       console.error('Erro ao criar loja:', error);
@@ -189,37 +182,26 @@ export default function StoreManagement() {
     }
   };
 
-  // Atualizar loja existente
-  const onEditSubmit = async (data: EditStoreFormData) => {
-    if (!currentStore) return;
-    
-    try {
-      await storeService.updateStore(currentStore.id, data);
-      toast.success('Loja atualizada com sucesso');
-      setIsEditModalOpen(false);
-      loadStores();
-    } catch (error: any) {
-      console.error('Erro ao atualizar loja:', error);
-      toast.error(error.message || 'Erro ao atualizar loja');
-    }
-  };
-
-  // Excluir loja
-  const deleteStore = async () => {
-    if (!storeToDelete) return;
-    
-    try {
-      await storeService.deleteStore(storeToDelete.id);
-      toast.success('Loja excluída com sucesso');
-      closeDeleteConfirmation();
-      loadStores();
-    } catch (error: any) {
-      console.error('Erro ao excluir loja:', error);
-      toast.error(error.message || 'Erro ao excluir loja');
-    }
-  };
-
   const isSuperAdmin = user?.role === 'superadmin';
+
+  // Se houver erro, mostrar mensagem de erro
+  if (error && !loading) {
+    return (
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <ExclamationTriangleIcon className="w-16 h-16 mx-auto text-red-400 mb-4" />
+          <h3 className="text-lg font-medium text-red-900 mb-2">Erro ao carregar dados</h3>
+          <p className="text-red-700 mb-4">{error}</p>
+          <button
+            onClick={loadStores}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -235,7 +217,7 @@ export default function StoreManagement() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={openCreateModal}
+            onClick={() => setIsCreateModalOpen(true)}
             className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg flex items-center"
           >
             <PlusIcon className="w-5 h-5 mr-2" />
@@ -289,7 +271,7 @@ export default function StoreManagement() {
                 <div className="flex justify-between items-start mb-4">
                   <h3 className="text-lg font-semibold text-gray-900">{store.name}</h3>
                   <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                    Ativo
+                    {store.is_active !== false ? 'Ativo' : 'Inativo'}
                   </span>
                 </div>
                 
@@ -321,16 +303,14 @@ export default function StoreManagement() {
               {isSuperAdmin && (
                 <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end space-x-2">
                   <button
-                    onClick={() => openEditModal(store)}
                     className="text-blue-600 hover:text-blue-800 p-1"
-                    title="Editar e adicionar mais informações"
+                    title="Editar loja"
                   >
                     <PencilSquareIcon className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => openDeleteConfirmation(store)}
                     className="text-red-600 hover:text-red-800 p-1"
-                    title="Excluir"
+                    title="Excluir loja"
                   >
                     <TrashIcon className="w-5 h-5" />
                   </button>
@@ -341,7 +321,7 @@ export default function StoreManagement() {
         </div>
       )}
 
-      {/* Modal para criar loja (dados básicos) */}
+      {/* Modal para criar loja */}
       {isCreateModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <motion.div
@@ -361,20 +341,20 @@ export default function StoreManagement() {
               </button>
             </div>
             
-            <form onSubmit={handleSubmitCreate(onCreateSubmit)} className="px-6 py-4">
+            <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-4">
               <div className="space-y-4">
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
                     Nome da Loja *
                   </label>
                   <input
-                    {...registerCreate('name')}
+                    {...register('name')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="Ex: Restaurante do João"
                   />
-                  {errorsCreate.name && (
-                    <p className="mt-1 text-sm text-red-600">{errorsCreate.name.message}</p>
+                  {errors.name && (
+                    <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
                   )}
                 </div>
                 
@@ -383,13 +363,13 @@ export default function StoreManagement() {
                     Telefone *
                   </label>
                   <input
-                    {...registerCreate('phone')}
+                    {...register('phone')}
                     type="text"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="(11) 99999-9999"
                   />
-                  {errorsCreate.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errorsCreate.phone.message}</p>
+                  {errors.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
                   )}
                 </div>
                 
@@ -398,13 +378,13 @@ export default function StoreManagement() {
                     Email *
                   </label>
                   <input
-                    {...registerCreate('email')}
+                    {...register('email')}
                     type="email"
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
                     placeholder="contato@restaurante.com"
                   />
-                  {errorsCreate.email && (
-                    <p className="mt-1 text-sm text-red-600">{errorsCreate.email.message}</p>
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
                   )}
                 </div>
               </div>
@@ -423,213 +403,13 @@ export default function StoreManagement() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmittingCreate}
+                  disabled={isSubmitting}
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
-                  {isSubmittingCreate ? 'Criando...' : 'Criar Loja'}
+                  {isSubmitting ? 'Criando...' : 'Criar Loja'}
                 </button>
               </div>
             </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Modal para editar loja (dados completos) */}
-      {isEditModalOpen && currentStore && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Editar Loja: {currentStore.name}
-              </h3>
-              <button
-                onClick={() => setIsEditModalOpen(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmitEdit(onEditSubmit)} className="px-6 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome da Loja *
-                  </label>
-                  <input
-                    {...registerEdit('name')}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.name && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.name.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    {...registerEdit('email')}
-                    type="email"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.email && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.email.message}</p>
-                  )}
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Endereço
-                  </label>
-                  <input
-                    {...registerEdit('address')}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Rua, número, complemento"
-                  />
-                  {errorsEdit.address && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.address.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
-                    Cidade
-                  </label>
-                  <input
-                    {...registerEdit('city')}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.city && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.city.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
-                    Estado
-                  </label>
-                  <select
-                    {...registerEdit('state')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="">Selecione o estado</option>
-                    {ESTADOS_BRASILEIROS.map(estado => (
-                      <option key={estado.sigla} value={estado.sigla}>
-                        {estado.nome}
-                      </option>
-                    ))}
-                  </select>
-                  {errorsEdit.state && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.state.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-1">
-                    CEP
-                  </label>
-                  <input
-                    {...registerEdit('zip_code')}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="00000-000"
-                  />
-                  {errorsEdit.zip_code && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.zip_code.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone *
-                  </label>
-                  <input
-                    {...registerEdit('phone')}
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.phone.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="logo_url" className="block text-sm font-medium text-gray-700 mb-1">
-                    URL do Logo
-                  </label>
-                  <input
-                    {...registerEdit('logo_url')}
-                    type="url"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="https://exemplo.com/logo.png"
-                  />
-                  {errorsEdit.logo_url && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.logo_url.message}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingEdit}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {isSubmittingEdit ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
-
-      {/* Modal de confirmação de exclusão */}
-      {isDeleting && storeToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl max-w-md w-full"
-          >
-            <div className="p-6">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Confirmar Exclusão
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Tem certeza que deseja excluir a loja "{storeToDelete.name}"? 
-                Esta ação não pode ser desfeita.
-              </p>
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={closeDeleteConfirmation}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={deleteStore}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                >
-                  Excluir
-                </button>
-              </div>
-            </div>
           </motion.div>
         </div>
       )}
