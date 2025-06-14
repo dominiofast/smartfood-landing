@@ -78,7 +78,7 @@ type StoreExtended = Store & {
   active_users?: number;
 };
 
-export default function StoresManagement() {
+export default function StoreManagement() {
   const { user } = useAuth();
   const [stores, setStores] = useState<StoreExtended[]>([]);
   const [loading, setLoading] = useState(true);
