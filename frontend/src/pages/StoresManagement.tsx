@@ -1,39 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
-import * as yup from 'yup';
+import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { 
   PlusIcon, 
   PencilSquareIcon, 
   TrashIcon, 
-  XMarkIcon,
-  CheckIcon,
-  BuildingStorefrontIcon,
   MagnifyingGlassIcon,
-  MapPinIcon,
-  PhoneIcon,
-  EnvelopeIcon,
-  UserGroupIcon,
-  ChartBarIcon,
-  ArrowPathIcon,
-  AdjustmentsHorizontalIcon,
-  EyeIcon,
-  FunnelIcon,
+  BuildingStorefrontIcon,
   ArrowDownTrayIcon,
-  Squares2X2Icon,
-  ListBulletIcon,
-  DocumentArrowDownIcon,
-  CurrencyDollarIcon,
-  ShoppingBagIcon,
-  ClockIcon
+  FunnelIcon,
+  XMarkIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline';
 import { storeService, Store } from '../services/storeService';
 import { useAuth } from '../contexts/AuthContext';
-import { Link } from 'react-router-dom';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 // Schema de validação para o formulário de loja
 const storeSchema = yup.object({
