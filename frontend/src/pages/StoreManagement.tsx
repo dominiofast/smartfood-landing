@@ -101,8 +101,9 @@ export default function StoreManagement() {
       setError(null);
       
       // Determinar endpoint baseado no ambiente
+      const isNetlifyDev = window.location.port === '8888';
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      const endpoint = isProduction ? '/.netlify/functions/stores-crud' : '/api/stores';
+      const endpoint = (isNetlifyDev || isProduction) ? '/.netlify/functions/stores-crud' : '/api/stores';
       
       console.log('Carregando lojas do endpoint:', endpoint);
       
@@ -145,8 +146,9 @@ export default function StoreManagement() {
     try {
       console.log('Criando loja com dados:', data);
       
+      const isNetlifyDev = window.location.port === '8888';
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      const endpoint = isProduction ? '/.netlify/functions/stores-crud' : '/api/stores';
+      const endpoint = (isNetlifyDev || isProduction) ? '/.netlify/functions/stores-crud' : '/api/stores';
       
       const response = await fetch(endpoint, {
         method: 'POST',

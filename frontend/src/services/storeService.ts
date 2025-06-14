@@ -56,8 +56,11 @@ export interface StoresResponse {
 
 class StoreService {
   async getStores(): Promise<Store[]> {
-    // Verificar se estamos em produção (Netlify) ou desenvolvimento local
-    const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+    // Verificar se estamos usando Netlify Dev (porta 8888) ou desenvolvimento puro (porta 3000)
+    const isNetlifyDev = window.location.port === '8888';
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    const endpoint = (isNetlifyDev || isProduction)
       ? '/.netlify/functions/stores-crud' 
       : '/api/stores';
     
@@ -66,7 +69,10 @@ class StoreService {
   }
 
   async getStore(id: string): Promise<Store> {
-    const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+    const isNetlifyDev = window.location.port === '8888';
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    const endpoint = (isNetlifyDev || isProduction)
       ? `/.netlify/functions/stores-crud/${id}` 
       : `/api/stores/${id}`;
     
@@ -75,7 +81,10 @@ class StoreService {
   }
 
   async createStore(storeData: { name: string; phone: string; email: string } | Partial<Store>): Promise<Store> {
-    const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+    const isNetlifyDev = window.location.port === '8888';
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    const endpoint = (isNetlifyDev || isProduction)
       ? '/.netlify/functions/stores-crud' 
       : '/api/stores';
     
@@ -101,7 +110,10 @@ class StoreService {
   }
 
   async updateStore(id: string, storeData: Partial<Store>): Promise<Store> {
-    const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+    const isNetlifyDev = window.location.port === '8888';
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    const endpoint = (isNetlifyDev || isProduction)
       ? `/.netlify/functions/stores-crud/${id}` 
       : `/api/stores/${id}`;
     
@@ -110,7 +122,10 @@ class StoreService {
   }
 
   async deleteStore(id: string): Promise<void> {
-    const endpoint = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' 
+    const isNetlifyDev = window.location.port === '8888';
+    const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+    
+    const endpoint = (isNetlifyDev || isProduction)
       ? `/.netlify/functions/stores-crud/${id}` 
       : `/api/stores/${id}`;
     

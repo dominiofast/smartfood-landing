@@ -31,10 +31,34 @@ const query = async (text, params) => {
 };
 
 exports.handler = async (event, context) => {
+  console.log('=== AUTH-LOGIN CHAMADO ===');
+  console.log('Método HTTP:', event.httpMethod);
+  console.log('Path:', event.path);
+  console.log('Headers:', JSON.stringify(event.headers, null, 2));
+  console.log('Body:', event.body);
+  console.log('Query:', event.queryStringParameters);
+  
+  // Configurar CORS
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+  
+  // Responder a requisições OPTIONS (CORS preflight)
+  if (event.httpMethod === 'OPTIONS') {
+    return {
+      statusCode: 204,
+      headers
+    };
+  }
+  
   // Only allow POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
+      headers,
       body: JSON.stringify({ error: 'Method not allowed' })
     };
   }
@@ -46,6 +70,7 @@ exports.handler = async (event, context) => {
     if (!email || !password) {
       return {
         statusCode: 400,
+        headers,
         body: JSON.stringify({ error: 'Email e senha são obrigatórios' })
       };
     }
@@ -62,6 +87,7 @@ exports.handler = async (event, context) => {
     if (userResult.rows.length === 0) {
       return {
         statusCode: 401,
+        headers,
         body: JSON.stringify({ error: 'Credenciais inválidas' })
       };
     }
@@ -73,6 +99,7 @@ exports.handler = async (event, context) => {
     if (!isValidPassword) {
       return {
         statusCode: 401,
+        headers,
         body: JSON.stringify({ error: 'Credenciais inválidas' })
       };
     }
@@ -105,9 +132,7 @@ exports.handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         success: true,
         token,
@@ -128,6 +153,7 @@ exports.handler = async (event, context) => {
     console.error('Login error:', error);
     return {
       statusCode: 500,
+      headers,
       body: JSON.stringify({ error: 'Erro ao processar login' })
     };
   }

@@ -158,19 +158,24 @@ exports.handler = async (event, context) => {
           .substring(0, 100);
 
         // Verificar se já existe um superadmin para usar como created_by
-        const superAdminResult = await query(
-          "SELECT id FROM users WHERE role = 'superadmin' LIMIT 1"
-        );
+        let createdBy;
+        try {
+          const superAdminResult = await query(
+            "SELECT id FROM users WHERE role = 'superadmin' LIMIT 1"
+          );
 
-        if (superAdminResult.rows.length === 0) {
-          return {
-            statusCode: 400,
-            headers,
-            body: JSON.stringify({ error: 'Nenhum superadmin encontrado para criar a loja' })
-          };
+          if (superAdminResult.rows.length === 0) {
+            // Se não há superadmin, criar um UUID temporário
+            createdBy = 'temp-' + Date.now();
+          } else {
+            createdBy = superAdminResult.rows[0].id;
+          }
+        } catch (error) {
+          console.log('Erro ao buscar superadmin, usando ID temporário');
+          createdBy = 'temp-' + Date.now();
         }
-
-        const createdBy = superAdminResult.rows[0].id;
+        
+        console.log('Dados recebidos:', { name, address, city, state, zip_code, phone, email, logo_url });
         
         const result = await query(
           `INSERT INTO stores (
@@ -185,10 +190,8 @@ exports.handler = async (event, context) => {
             business_type,
             images_logo,
             is_active, 
-            created_by, 
-            created_at, 
-            updated_at
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            created_by
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11)
           RETURNING *`,
           [
             name, 

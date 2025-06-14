@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login</title>
+</head>
+<body>
+    <h1>Teste de Login</h1>
+    <button onclick="testarLogin()">Testar Login</button>
+    <pre id="resultado"></pre>
+
+    <script>
+        async function testarLogin() {
+            const resultado = document.getElementById('resultado');
+            resultado.textContent = 'Testando...';
+            
+            try {
+                const response = await fetch('http://localhost:8888/.netlify/functions/auth-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'admin@dominiotech.com',
+                        password: 'SuperAdmin@123'
+                    })
+                });
+                
+                const data = await response.json();
+                resultado.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.success) {
+                    console.log('Login bem-sucedido!');
+                    console.log('Token:', data.token);
+                    console.log('Usuário:', data.user);
+                }
+            } catch (error) {
+                resultado.textContent = 'Erro: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html> 
