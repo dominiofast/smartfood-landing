@@ -4,12 +4,24 @@ export interface Store {
   id: number;
   name: string;
   address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
   phone: string | null;
   email: string | null;
   logo_url: string | null;
+  manager_name: string | null;
+  manager_email: string | null;
+  manager_phone: string | null;
+  opening_hours: string | null;
+  description: string | null;
+  status: 'active' | 'inactive' | 'pending';
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  total_sales?: number;
+  total_orders?: number;
+  active_users?: number;
 }
 
 export interface StoreResponse {

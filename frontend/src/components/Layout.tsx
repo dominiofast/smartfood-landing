@@ -34,7 +34,7 @@ const Layout: React.FC = () => {
     if (user?.role === 'superadmin') {
       return [
         ...baseItems,
-        { name: 'Lojas', href: '/superadmin/stores', icon: BuildingStorefrontIcon },
+        { name: 'Gestão de Lojas', href: '/superadmin/stores', icon: BuildingStorefrontIcon },
         { name: 'Usuários', href: '/superadmin/users', icon: UsersIcon },
         { name: 'Assistente IA', href: '/superadmin/ai-assistant', icon: SparklesIcon },
         { name: 'Relatórios', href: '/superadmin/reports', icon: ChartBarIcon },
