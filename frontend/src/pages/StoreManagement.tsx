@@ -6,12 +6,11 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { 
   PlusIcon, 
-  PencilSquareIcon, 
-  TrashIcon, 
   MagnifyingGlassIcon,
   BuildingStorefrontIcon,
   XMarkIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  UserPlusIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -48,6 +47,29 @@ const createStoreSchema = yup.object({
 
 type CreateStoreFormData = yup.InferType<typeof createStoreSchema>;
 
+// Schema para edição de loja
+const editStoreSchema = yup.object({
+  name: yup.string().required('Nome da loja é obrigatório'),
+  phone: yup.string().required('Telefone é obrigatório'),
+  email: yup.string().email('Email inválido').required('Email é obrigatório'),
+  address: yup.string(),
+  city: yup.string(),
+  state: yup.string(),
+  zip_code: yup.string(),
+  logo_url: yup.string().url('URL inválida').nullable(),
+});
+
+type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
+
+// Schema para criar manager
+const createManagerSchema = yup.object({
+  name: yup.string().required('Nome é obrigatório'),
+  email: yup.string().email('Email inválido').required('Email é obrigatório'),
+  password: yup.string().min(8, 'Senha deve ter no mínimo 8 caracteres').required('Senha é obrigatória'),
+});
+
+type CreateManagerFormData = yup.InferType<typeof createManagerSchema>;
+
 
 
 export default function StoreManagement() {
@@ -56,6 +78,9 @@ export default function StoreManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isCreateManagerModalOpen, setIsCreateManagerModalOpen] = useState(false);
+  const [selectedStore, setSelectedStore] = useState<SimpleStore | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredStores, setFilteredStores] = useState<SimpleStore[]>([]);
 
@@ -69,10 +94,38 @@ export default function StoreManagement() {
     resolver: yupResolver(createStoreSchema),
   });
 
+  // Form para editar loja
+  const {
+    register: registerEdit,
+    handleSubmit: handleSubmitEdit,
+    reset: resetEdit,
+    setValue: setValueEdit,
+    formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
+  } = useForm<EditStoreFormData>({
+    resolver: yupResolver(editStoreSchema),
+  });
+
+  // Form para criar manager
+  const {
+    register: registerManager,
+    handleSubmit: handleSubmitManager,
+    reset: resetManager,
+    formState: { errors: errorsManager, isSubmitting: isSubmittingManager },
+  } = useForm<CreateManagerFormData>({
+    resolver: yupResolver(createManagerSchema),
+  });
+
   // Carregar lojas ao iniciar
   useEffect(() => {
     loadStores();
   }, []);
+
+  // Verificar se o usuário pode editar a loja
+  const canEditStore = (store: SimpleStore): boolean => {
+    if (user?.role === 'superadmin') return true;
+    if (user?.role === 'manager' && user.store?.id === store.id) return true;
+    return false;
+  };
 
   // Aplicar filtros de busca
   useEffect(() => {
@@ -184,7 +237,111 @@ export default function StoreManagement() {
     }
   };
 
+  // Abrir modal de edição
+  const handleEdit = (store: SimpleStore) => {
+    setSelectedStore(store);
+    setValueEdit('name', store.name);
+    setValueEdit('phone', store.phone || '');
+    setValueEdit('email', store.email || '');
+    setValueEdit('address', store.address || '');
+    setValueEdit('city', store.city || '');
+    setValueEdit('state', store.state || 'SP');
+    setValueEdit('zip_code', store.zip_code || '');
+    setValueEdit('logo_url', store.logo_url || '');
+    setIsEditModalOpen(true);
+  };
+
+  // Atualizar loja
+  const onSubmitEdit = async (data: EditStoreFormData) => {
+    if (!selectedStore) return;
+    
+    try {
+      console.log('Atualizando loja:', selectedStore.id, data);
+      
+      const isNetlifyDev = window.location.port === '8888';
+      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      const endpoint = (isNetlifyDev || isProduction) 
+        ? `/.netlify/functions/stores-crud/${selectedStore.id}` 
+        : `/api/stores/${selectedStore.id}`;
+      
+      const response = await fetch(endpoint, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({
+          ...data,
+          id: selectedStore.id
+        })
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || result.message || 'Erro ao atualizar loja');
+      }
+
+      toast.success('Loja atualizada com sucesso!');
+      setIsEditModalOpen(false);
+      resetEdit();
+      setSelectedStore(null);
+      loadStores();
+    } catch (error: any) {
+      console.error('Erro ao atualizar loja:', error);
+      toast.error(error.message || 'Erro ao atualizar loja');
+    }
+  };
+
+  // Abrir modal para criar manager
+  const handleCreateManager = (store: SimpleStore) => {
+    setSelectedStore(store);
+    setIsCreateManagerModalOpen(true);
+  };
+
+  // Criar manager
+  const onSubmitManager = async (data: CreateManagerFormData) => {
+    if (!selectedStore) return;
+    
+    try {
+      console.log('Criando manager para loja:', selectedStore.id, data);
+      
+      const response = await fetch('http://localhost:8888/.netlify/functions/create-manager', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+        },
+        body: JSON.stringify({
+          ...data,
+          store_id: selectedStore.id
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Erro ao criar dono da loja');
+      }
+
+      console.log('Manager criado:', result);
+      
+      // Fechar modal e limpar formulário
+      setIsCreateManagerModalOpen(false);
+      resetManager();
+      setSelectedStore(null);
+      
+      // Mostrar mensagem de sucesso
+      alert(`Dono da loja criado com sucesso!\n\nEmail: ${result.credentials.email}\nSenha: ${result.credentials.password}\n\nGuarde essas informações!`);
+      
+    } catch (error) {
+      console.error('Erro ao criar manager:', error);
+      alert(error instanceof Error ? error.message : 'Erro ao criar dono da loja');
+    }
+  };
+
   const isSuperAdmin = user?.role === 'superadmin';
+  const canCreateStore = isSuperAdmin; // Apenas superadmin pode criar lojas
 
   // Se houver erro, mostrar mensagem de erro
   if (error && !loading) {
@@ -215,7 +372,7 @@ export default function StoreManagement() {
             Gerencie todas as lojas da plataforma SmartFood
           </p>
         </div>
-        {isSuperAdmin && (
+        {canCreateStore && (
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -260,66 +417,111 @@ export default function StoreManagement() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredStores.map((store) => (
-            <motion.div
-              key={store.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="bg-white rounded-lg shadow-md overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">{store.name}</h3>
-                  <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">
-                    {store.is_active !== false ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
-                
-                <div className="space-y-2 text-sm text-gray-600">
-                  {(store.contact_phone || store.phone) && (
-                    <p>
-                      <span className="font-medium">Telefone:</span> {store.contact_phone || store.phone}
-                    </p>
-                  )}
-                  {(store.contact_email || store.email) && (
-                    <p>
-                      <span className="font-medium">Email:</span> {store.contact_email || store.email}
-                    </p>
-                  )}
-                  {(store.address_street || store.address) && (
-                    <p>
-                      <span className="font-medium">Endereço:</span> {store.address_street || store.address}
-                    </p>
-                  )}
-                  {store.created_at && (
-                    <p>
-                      <span className="font-medium">Criado em:</span>{' '}
-                      {new Date(store.created_at).toLocaleDateString('pt-BR')}
-                    </p>
-                  )}
-                </div>
-              </div>
-              
-              {isSuperAdmin && (
-                <div className="px-6 py-3 bg-gray-50 border-t border-gray-100 flex justify-end space-x-2">
-                  <button
-                    className="text-blue-600 hover:text-blue-800 p-1"
-                    title="Editar loja"
-                  >
-                    <PencilSquareIcon className="w-5 h-5" />
-                  </button>
-                  <button
-                    className="text-red-600 hover:text-red-800 p-1"
-                    title="Excluir loja"
-                  >
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          ))}
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ID
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Nome da Loja
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Telefone
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Criado em
+                </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {filteredStores.map((store) => (
+                <motion.tr
+                  key={store.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                  className="hover:bg-gray-50"
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    #{store.id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900">{store.name}</div>
+                    {(store.address_street || store.address) && (
+                      <div className="text-sm text-gray-500">
+                        {store.address_street || store.address}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {store.contact_phone || store.phone || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {store.contact_email || store.email || '-'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      store.is_active !== false 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {store.is_active !== false ? 'Ativo' : 'Inativo'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {store.created_at 
+                      ? new Date(store.created_at).toLocaleDateString('pt-BR')
+                      : '-'
+                    }
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {canEditStore(store) ? (
+                      <>
+                        <button
+                          onClick={() => handleEdit(store)}
+                          className="text-primary-600 hover:text-primary-900 mr-3"
+                          title="Gerenciar loja"
+                        >
+                          Gerenciar
+                        </button>
+                        {isSuperAdmin && (
+                          <>
+                            <button
+                              onClick={() => handleCreateManager(store)}
+                              className="text-green-600 hover:text-green-900 mr-3"
+                              title="Criar dono da loja"
+                            >
+                              <UserPlusIcon className="w-5 h-5 inline" />
+                              Criar Dono
+                            </button>
+                            <button
+                              className="text-red-600 hover:text-red-900"
+                              title="Excluir loja"
+                            >
+                              Excluir
+                            </button>
+                          </>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -409,6 +611,312 @@ export default function StoreManagement() {
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                 >
                   {isSubmitting ? 'Criando...' : 'Criar Loja'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal para editar loja */}
+      {isEditModalOpen && selectedStore && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Gerenciar Loja
+              </h3>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  resetEdit();
+                  setSelectedStore(null);
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="px-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Informações Básicas */}
+                <div className="md:col-span-2">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Informações Básicas</h4>
+                </div>
+                
+                <div>
+                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
+                    Nome da Loja *
+                  </label>
+                  <input
+                    {...registerEdit('name')}
+                    id="edit-name"
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  {errorsEdit.name && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.name.message}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <label htmlFor="edit-phone" className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefone *
+                  </label>
+                  <input
+                    {...registerEdit('phone')}
+                    id="edit-phone"
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  {errorsEdit.phone && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.phone.message}</p>
+                  )}
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    {...registerEdit('email')}
+                    id="edit-email"
+                    type="email"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  {errorsEdit.email && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.email.message}</p>
+                  )}
+                </div>
+                
+                {/* Endereço */}
+                <div className="md:col-span-2 mt-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Endereço</h4>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label htmlFor="edit-address" className="block text-sm font-medium text-gray-700 mb-1">
+                    Endereço
+                  </label>
+                  <input
+                    {...registerEdit('address')}
+                    id="edit-address"
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="Rua, número, complemento"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="edit-city" className="block text-sm font-medium text-gray-700 mb-1">
+                    Cidade
+                  </label>
+                  <input
+                    {...registerEdit('city')}
+                    id="edit-city"
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="edit-state" className="block text-sm font-medium text-gray-700 mb-1">
+                    Estado
+                  </label>
+                  <select
+                    {...registerEdit('state')}
+                    id="edit-state"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="AC">AC</option>
+                    <option value="AL">AL</option>
+                    <option value="AP">AP</option>
+                    <option value="AM">AM</option>
+                    <option value="BA">BA</option>
+                    <option value="CE">CE</option>
+                    <option value="DF">DF</option>
+                    <option value="ES">ES</option>
+                    <option value="GO">GO</option>
+                    <option value="MA">MA</option>
+                    <option value="MT">MT</option>
+                    <option value="MS">MS</option>
+                    <option value="MG">MG</option>
+                    <option value="PA">PA</option>
+                    <option value="PB">PB</option>
+                    <option value="PR">PR</option>
+                    <option value="PE">PE</option>
+                    <option value="PI">PI</option>
+                    <option value="RJ">RJ</option>
+                    <option value="RN">RN</option>
+                    <option value="RS">RS</option>
+                    <option value="RO">RO</option>
+                    <option value="RR">RR</option>
+                    <option value="SC">SC</option>
+                    <option value="SP">SP</option>
+                    <option value="SE">SE</option>
+                    <option value="TO">TO</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label htmlFor="edit-zip" className="block text-sm font-medium text-gray-700 mb-1">
+                    CEP
+                  </label>
+                  <input
+                    {...registerEdit('zip_code')}
+                    id="edit-zip"
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="00000-000"
+                  />
+                </div>
+                
+                {/* Logo */}
+                <div className="md:col-span-2 mt-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Imagens</h4>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label htmlFor="edit-logo" className="block text-sm font-medium text-gray-700 mb-1">
+                    URL do Logo
+                  </label>
+                  <input
+                    {...registerEdit('logo_url')}
+                    id="edit-logo"
+                    type="url"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    placeholder="https://exemplo.com/logo.png"
+                  />
+                  {errorsEdit.logo_url && (
+                    <p className="mt-1 text-sm text-red-600">{errorsEdit.logo_url.message}</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    resetEdit();
+                    setSelectedStore(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingEdit}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {isSubmittingEdit ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal para criar manager */}
+      {isCreateManagerModalOpen && selectedStore && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-lg shadow-xl w-full max-w-md"
+          >
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Criar Dono da Loja
+              </h3>
+              <button
+                onClick={() => {
+                  setIsCreateManagerModalOpen(false);
+                  resetManager();
+                }}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitManager(onSubmitManager)} className="p-6">
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">
+                  Criando dono para: <strong>{selectedStore.name}</strong>
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Nome Completo
+                  </label>
+                  <input
+                    type="text"
+                    {...registerManager('name')}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    placeholder="Ex: João Silva"
+                  />
+                  {errorsManager.name && (
+                    <p className="mt-1 text-sm text-red-600">{errorsManager.name.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Email (será usado para login)
+                  </label>
+                  <input
+                    type="email"
+                    {...registerManager('email')}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    placeholder="Ex: joao@suaempresa.com"
+                  />
+                  {errorsManager.email && (
+                    <p className="mt-1 text-sm text-red-600">{errorsManager.email.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Senha
+                  </label>
+                  <input
+                    type="password"
+                    {...registerManager('password')}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                    placeholder="Mínimo 8 caracteres"
+                  />
+                  {errorsManager.password && (
+                    <p className="mt-1 text-sm text-red-600">{errorsManager.password.message}</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateManagerModalOpen(false);
+                    resetManager();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingManager}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md text-sm font-medium hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {isSubmittingManager ? 'Criando...' : 'Criar Dono'}
                 </button>
               </div>
             </form>

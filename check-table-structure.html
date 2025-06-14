@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificar Estrutura da Tabela</title>
+</head>
+<body>
+    <h1>Verificar Estrutura da Tabela Stores</h1>
+    <button onclick="verificarEstrutura()">Verificar Estrutura</button>
+    <pre id="resultado"></pre>
+
+    <script>
+        async function verificarEstrutura() {
+            const resultado = document.getElementById('resultado');
+            resultado.textContent = 'Verificando...';
+            
+            try {
+                const response = await fetch('http://localhost:8888/.netlify/functions/check-table-structure', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+                    }
+                });
+                
+                const data = await response.json();
+                resultado.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultado.textContent = 'Erro: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -8,11 +8,12 @@ import { AIProvider } from './contexts/AIContext';
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
-import ManagerDashboard from './pages/ManagerDashboard';
 import StoreManagement from './pages/StoreManagement';
 import UserManagement from './pages/UserManagement';
 import AIAssistant from './pages/AIAssistant';
 import Reports from './pages/Reports';
+import Orders from './pages/Orders';
+import MenuManager from './pages/MenuManager';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -61,13 +62,17 @@ function App() {
                   <Route index element={<SuperAdminDashboard />} />
                   <Route path="stores" element={<StoreManagement />} />
                   <Route path="users" element={<UserManagement />} />
+                  <Route path="orders" element={<Orders />} />
+                  <Route path="menu" element={<MenuManager />} />
                   <Route path="ai-assistant" element={<AIAssistant />} />
                   <Route path="reports" element={<Reports />} />
                 </Route>
                 
                 {/* Manager Routes */}
                 <Route path="/manager" element={<ProtectedRoute allowedRoles={['manager', 'superadmin']} />}>
-                  <Route index element={<ManagerDashboard />} />
+                  <Route index element={<Navigate to="/manager/orders" replace />} />
+                  <Route path="orders" element={<Orders />} />
+                  <Route path="menu" element={<MenuManager />} />
                   <Route path="store" element={<StoreManagement />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="ai-assistant" element={<AIAssistant />} />

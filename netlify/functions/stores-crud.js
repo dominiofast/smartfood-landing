@@ -28,7 +28,10 @@ const query = async (text, params) => {
   }
 };
 
-// Middleware para verificar autenticação
+// Importar JWT
+const jwt = require('jsonwebtoken');
+
+// Middleware para verificar autenticação e extrair dados do usuário
 const verifyAuth = (headers) => {
   const authHeader = headers.authorization;
   
@@ -36,9 +39,15 @@ const verifyAuth = (headers) => {
     throw new Error('Token de autenticação não fornecido');
   }
   
-  // Em uma implementação real, você verificaria o token JWT aqui
-  // Por simplicidade, apenas verificamos se o token existe
-  return true;
+  const token = authHeader.substring(7);
+  const JWT_SECRET = process.env.JWT_SECRET || 'smartfood-secret-key-2025';
+  
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    return decoded; // Retorna os dados do usuário decodificados do token
+  } catch (error) {
+    throw new Error('Token inválido ou expirado');
+  }
 };
 
 exports.handler = async (event, context) => {
@@ -58,12 +67,15 @@ exports.handler = async (event, context) => {
     };
   }
   
+  let userData = null;
+  
   try {
-    // Verificar autenticação (exceto para GET /stores que pode ser público)
-    if (!(event.httpMethod === 'GET' && event.path === '/.netlify/functions/stores-crud')) {
-      try {
-        verifyAuth(event.headers);
-      } catch (error) {
+    // Sempre verificar autenticação para obter dados do usuário
+    try {
+      userData = verifyAuth(event.headers);
+    } catch (error) {
+      // Para GET, permitir acesso sem autenticação mas sem filtros
+      if (event.httpMethod !== 'GET') {
         return {
           statusCode: 401,
           headers,
@@ -101,7 +113,19 @@ exports.handler = async (event, context) => {
           };
         } else {
           // Buscar todas as lojas
-          const result = await query('SELECT * FROM stores ORDER BY name');
+          let queryText = 'SELECT * FROM stores';
+          let queryParams = [];
+          
+          // Se for manager, filtrar apenas a loja dele
+          if (userData && userData.role === 'manager' && userData.store_id) {
+            queryText += ' WHERE id = $1';
+            queryParams = [userData.store_id];
+          }
+          // SuperAdmin vê todas as lojas
+          
+          queryText += ' ORDER BY name';
+          
+          const result = await query(queryText, queryParams);
           
           return {
             statusCode: 200,
@@ -112,6 +136,15 @@ exports.handler = async (event, context) => {
       }
       
       case 'POST': {
+        // Apenas superadmin pode criar lojas
+        if (!userData || userData.role !== 'superadmin') {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Apenas superadmin pode criar lojas' })
+          };
+        }
+        
         // Criar nova loja
         const { 
           name, 
@@ -149,13 +182,7 @@ exports.handler = async (event, context) => {
           };
         }
 
-        // Gerar slug único a partir do nome
-        const slug = name.toLowerCase()
-          .normalize('NFD')
-          .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-          .replace(/[^a-z0-9\s-]/g, '') // Remove caracteres especiais
-          .replace(/\s+/g, '-') // Substitui espaços por hífens
-          .substring(0, 100);
+
 
         // Verificar se já existe um superadmin para usar como created_by
         let createdBy;
@@ -180,31 +207,19 @@ exports.handler = async (event, context) => {
         const result = await query(
           `INSERT INTO stores (
             name, 
-            slug,
-            address_street, 
-            address_city, 
-            address_state, 
-            address_zip_code, 
-            contact_phone, 
-            contact_email, 
-            business_type,
-            images_logo,
-            is_active, 
-            created_by
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true, $11)
+            address, 
+            phone, 
+            email, 
+            logo_url,
+            is_active
+          ) VALUES ($1, $2, $3, $4, $5, true)
           RETURNING *`,
           [
             name, 
-            slug,
             address || 'Endereço não informado', 
-            city || 'Cidade não informada', 
-            state || 'SP', 
-            zip_code || '00000-000', 
             phone, 
             email, 
-            'restaurant', // Tipo padrão
-            logo_url || null,
-            createdBy
+            logo_url || null
           ]
         );
         
@@ -216,15 +231,39 @@ exports.handler = async (event, context) => {
       }
       
       case 'PUT': {
+        // Verificar se usuário está autenticado
+        if (!userData) {
+          return {
+            statusCode: 401,
+            headers,
+            body: JSON.stringify({ error: 'Não autorizado' })
+          };
+        }
+        
         // Atualizar loja existente
         const pathParts = event.path.split('/');
-        const storeId = pathParts[pathParts.length - 1];
+        let storeId = pathParts[pathParts.length - 1];
         
-        if (!storeId) {
+        // Se o último segmento for 'stores-crud', tentar pegar o ID do body
+        if (storeId === 'stores-crud' && event.body) {
+          const bodyData = JSON.parse(event.body);
+          storeId = bodyData.id;
+        }
+        
+        if (!storeId || storeId === 'stores-crud') {
           return {
             statusCode: 400,
             headers,
             body: JSON.stringify({ error: 'ID da loja não fornecido' })
+          };
+        }
+        
+        // Verificar permissões: superadmin pode editar qualquer loja, manager apenas a sua
+        if (userData.role === 'manager' && userData.store_id !== parseInt(storeId)) {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Você só pode editar sua própria loja' })
           };
         }
         
@@ -267,6 +306,15 @@ exports.handler = async (event, context) => {
       }
       
       case 'DELETE': {
+        // Apenas superadmin pode excluir lojas
+        if (!userData || userData.role !== 'superadmin') {
+          return {
+            statusCode: 403,
+            headers,
+            body: JSON.stringify({ error: 'Apenas superadmin pode excluir lojas' })
+          };
+        }
+        
         // Excluir loja
         const pathParts = event.path.split('/');
         const storeId = pathParts[pathParts.length - 1];
