@@ -5,7 +5,8 @@
 
 [build.environment]
   NODE_VERSION = "18"
-  NPM_FLAGS = "--force"
+  NPM_FLAGS = "--force --no-audit"
+  NETLIFY_USE_YARN = "false"
 
 # Redirects for SPA
 [[redirects]]
