@@ -44,6 +44,7 @@ const Layout: React.FC = () => {
       return [
         ...baseItems,
         { name: 'Pedidos', href: '/superadmin/orders', icon: ShoppingBagIcon },
+        { name: 'Pedidos PDV', href: '/manager/pdv', icon: ComputerDesktopIcon },
         { name: 'Gestor de Cardápio', href: '/superadmin/menu', icon: ClipboardDocumentListIcon },
         { name: 'Gestão de Lojas', href: '/superadmin/stores', icon: BuildingStorefrontIcon },
         { name: 'Usuários', href: '/superadmin/users', icon: UsersIcon },
@@ -54,6 +55,7 @@ const Layout: React.FC = () => {
 
     return [
       { name: 'Pedidos', href: '/manager/orders', icon: ShoppingBagIcon },
+      { name: 'Pedidos PDV', href: '/manager/pdv', icon: ComputerDesktopIcon },
       { name: 'PDV', href: '/manager/pdv', icon: ComputerDesktopIcon },
       { name: 'Gestor de Cardápio', href: '/manager/menu', icon: ClipboardDocumentListIcon },
       { name: 'Minha Loja', href: '/manager/store', icon: BuildingStorefrontIcon },
