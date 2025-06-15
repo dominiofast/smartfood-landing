@@ -17,6 +17,7 @@ import MenuManager from './pages/MenuManager';
 import DigitalMenu from './pages/DigitalMenu';
 import DigitalMenuSettings from './pages/DigitalMenuSettings';
 import Customers from './pages/Customers';
+import PDV from './pages/PDV';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -78,6 +79,7 @@ function App() {
                 <Route path="/manager" element={<ProtectedRoute allowedRoles={['manager', 'superadmin']} />}>
                   <Route index element={<Navigate to="/manager/orders" replace />} />
                   <Route path="orders" element={<Orders />} />
+                  <Route path="pdv" element={<PDV />} />
                   <Route path="menu" element={<MenuManager />} />
                   <Route path="store" element={<StoreManagement />} />
                   <Route path="customers" element={<Customers />} />
