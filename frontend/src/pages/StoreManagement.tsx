@@ -191,7 +191,6 @@ export default function StoreManagement() {
       setLoading(true);
       setError(null);
       
-      // Determinar endpoint baseado no ambiente
       const isNetlifyDev = window.location.port === '8888';
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
       const endpoint = (isNetlifyDev || isProduction) ? '/.netlify/functions/stores-crud' : '/api/stores';
@@ -227,11 +226,23 @@ export default function StoreManagement() {
       });
       
       if (data.success && Array.isArray(data.stores)) {
-        setStores(data.stores);
-        setFilteredStores(data.stores);
-        console.log('Lojas carregadas com sucesso:', {
-          totalStores: data.stores.length,
-          firstStore: data.stores[0]
+        // Garantir que os dados da WhatsApp API sejam mantidos
+        const processedStores = data.stores.map(store => ({
+          ...store,
+          whatsappApi: store.whatsappApi || {
+            controlId: null,
+            host: null,
+            instanceKey: null,
+            token: null,
+            webhook: null
+          }
+        }));
+
+        setStores(processedStores);
+        setFilteredStores(processedStores);
+        console.log('Lojas processadas e carregadas:', {
+          totalStores: processedStores.length,
+          firstStore: processedStores[0]
         });
       } else {
         console.log('Nenhuma loja encontrada ou formato inválido:', data);
@@ -298,7 +309,8 @@ export default function StoreManagement() {
       storeId: store.id,
       storeName: store.name,
       currentUser: user,
-      storeData: store
+      storeData: store,
+      whatsappApi: store.whatsappApi
     });
 
     // Extrair dados do endereço do formato string, se necessário
@@ -311,6 +323,17 @@ export default function StoreManagement() {
       state: '',
       zipCode: ''
     };
+
+    // Garantir que temos dados da WhatsApp API
+    const whatsappApiData = {
+      controlId: store.whatsappApi?.controlId || '',
+      host: store.whatsappApi?.host || '',
+      instanceKey: store.whatsappApi?.instanceKey || '',
+      token: store.whatsappApi?.token || '',
+      webhook: store.whatsappApi?.webhook || ''
+    };
+
+    console.log('Dados da WhatsApp API:', whatsappApiData);
 
     try {
       // Se o endereço está em formato JSON string, fazer o parse
@@ -393,12 +416,12 @@ export default function StoreManagement() {
     setValueEdit('address.state', addressData.state);
     setValueEdit('address.zipCode', addressData.zipCode);
 
-    // Configurações do WhatsApp
-    setValueEdit('whatsappApi.controlId', store.whatsappApi?.controlId || '');
-    setValueEdit('whatsappApi.host', store.whatsappApi?.host || '');
-    setValueEdit('whatsappApi.instanceKey', store.whatsappApi?.instanceKey || '');
-    setValueEdit('whatsappApi.token', store.whatsappApi?.token || '');
-    setValueEdit('whatsappApi.webhook', store.whatsappApi?.webhook || '');
+    // Configurações do WhatsApp - usar os dados processados
+    setValueEdit('whatsappApi.controlId', whatsappApiData.controlId);
+    setValueEdit('whatsappApi.host', whatsappApiData.host);
+    setValueEdit('whatsappApi.instanceKey', whatsappApiData.instanceKey);
+    setValueEdit('whatsappApi.token', whatsappApiData.token);
+    setValueEdit('whatsappApi.webhook', whatsappApiData.webhook);
 
     console.log('Valores definidos no formulário de edição:', {
       name: store.name,
@@ -409,7 +432,7 @@ export default function StoreManagement() {
         email: store.contact_email || store.email,
         whatsapp: store.contact?.whatsapp
       },
-      whatsappApi: store.whatsappApi
+      whatsappApi: whatsappApiData
     });
     
     setIsEditModalOpen(true);
@@ -451,7 +474,15 @@ export default function StoreManagement() {
         address_neighborhood: data.address.neighborhood,
         address_city: data.address.city,
         address_state: data.address.state,
-        address_zip_code: data.address.zipCode
+        address_zip_code: data.address.zipCode,
+        // WhatsApp API - garantir que os campos vazios sejam null e não string vazia
+        whatsappApi: {
+          controlId: data.whatsappApi.controlId || null,
+          host: data.whatsappApi.host || null,
+          instanceKey: data.whatsappApi.instanceKey || null,
+          token: data.whatsappApi.token || null,
+          webhook: data.whatsappApi.webhook || null
+        }
       };
 
       console.log('Dados preparados para envio:', updateData);
@@ -476,13 +507,15 @@ export default function StoreManagement() {
       }
 
       const result = await response.json();
-      console.log('Resposta do servidor:', result);
+      console.log('Resposta do servidor após atualização:', result);
       
       toast.success('Loja atualizada com sucesso!');
       setIsEditModalOpen(false);
       resetEdit();
       setSelectedStore(null);
-      loadStores();
+      
+      // Recarregar os dados da loja imediatamente após a atualização
+      await loadStores();
     } catch (error: any) {
       console.error('Erro ao atualizar loja:', error);
       toast.error(error.message || 'Erro ao atualizar loja');
