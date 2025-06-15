@@ -21,6 +21,7 @@ interface AdditionalItem {
   name: string;
   price: number;
   order: number;
+  description?: string;
 }
 
 interface AdditionalCategory {
@@ -520,8 +521,13 @@ export default function MenuManager() {
                                   </div>
                                   <div className="space-y-1">
                                     {category.items.map((item) => (
-                                      <div key={item.id} className="flex items-center justify-between text-sm">
-                                        <span className="text-gray-600">{item.name}</span>
+                                      <div key={item.id} className="flex flex-col md:flex-row md:items-center md:justify-between text-sm">
+                                        <div>
+                                          <span className="text-gray-600 font-medium">{item.name}</span>
+                                          {item.description && (
+                                            <span className="block text-xs text-gray-500 mt-1">{item.description}</span>
+                                          )}
+                                        </div>
                                         <span className="text-gray-900 font-medium">+{formatCurrency(item.price)}</span>
                                       </div>
                                     ))}
@@ -943,40 +949,54 @@ export default function MenuManager() {
                       )}
                     </div>
                     <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Nome</label>
-                  <input
-                    type="text"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                    placeholder="Ex: Borda Recheada"
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Nome</label>
+                        <input
+                          type="text"
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                          placeholder="Ex: Borda Recheada"
                           value={additional.name}
                           onChange={(e) => {
                             const updated = [...newAdditionals];
                             updated[index].name = e.target.value;
                             setNewAdditionals(updated);
                           }}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Preço</label>
-                  <div className="mt-1 relative rounded-md shadow-sm">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-500 sm:text-sm">R$</span>
-                    </div>
-                    <input
-                      type="number"
-                      step="0.01"
-                      className="pl-12 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                      placeholder="0,00"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Descrição</label>
+                        <textarea
+                          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                          placeholder="Descrição do adicional (opcional)"
+                          rows={2}
+                          value={additional.description || ''}
+                          onChange={(e) => {
+                            const updated = [...newAdditionals];
+                            updated[index].description = e.target.value;
+                            setNewAdditionals(updated);
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">Preço</label>
+                        <div className="mt-1 relative rounded-md shadow-sm">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-gray-500 sm:text-sm">R$</span>
+                          </div>
+                          <input
+                            type="number"
+                            step="0.01"
+                            className="pl-12 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                            placeholder="0,00"
                             value={additional.price}
                             onChange={(e) => {
                               const updated = [...newAdditionals];
                               updated[index].price = parseFloat(e.target.value) || 0;
                               setNewAdditionals(updated);
                             }}
-                    />
-                  </div>
-                </div>
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
