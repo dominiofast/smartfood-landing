@@ -19,6 +19,7 @@ import DigitalMenuSettings from './pages/DigitalMenuSettings';
 import Customers from './pages/Customers';
 import PDV from './pages/PDV';
 import AddEmployee from './pages/AddEmployee';
+import DeliveryAreaSettings from './pages/DeliveryAreaSettings';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -89,6 +90,7 @@ function App() {
                   <Route path="ai-assistant" element={<AIAssistant />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="settings/digital-menu" element={<DigitalMenuSettings />} />
+                  <Route path="settings/delivery-area" element={<DeliveryAreaSettings />} />
                 </Route>
               </Route>
             </Route>

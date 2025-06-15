@@ -163,6 +163,19 @@ const Layout: React.FC = () => {
                         >
                           Cardápio Digital
                         </Link>
+                        {/* Nova opção Área de Entrega */}
+                        {user?.role !== 'superadmin' && (
+                          <Link
+                            to="/manager/settings/delivery-area"
+                            className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                              location.pathname.includes('/settings/delivery-area')
+                                ? 'bg-primary-100 text-primary-700'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            Área de Entrega
+                          </Link>
+                        )}
                       </div>
                     )}
                   </div>
@@ -282,6 +295,19 @@ const Layout: React.FC = () => {
                     >
                       Cardápio Digital
                     </Link>
+                    {/* Nova opção Área de Entrega */}
+                    {user?.role !== 'superadmin' && (
+                      <Link
+                        to="/manager/settings/delivery-area"
+                        className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                          location.pathname.includes('/settings/delivery-area')
+                            ? 'bg-primary-100 text-primary-700'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        Área de Entrega
+                      </Link>
+                    )}
                   </div>
                 )}
               </div>
