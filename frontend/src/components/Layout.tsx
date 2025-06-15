@@ -53,6 +53,7 @@ const Layout: React.FC = () => {
         { name: 'Usuários', href: '/superadmin/users', icon: UsersIcon },
         { name: 'Assistente IA', href: '/superadmin/ai-assistant', icon: SparklesIcon },
         { name: 'Relatórios', href: '/superadmin/reports', icon: ChartBarIcon },
+        { name: 'Conectar WhatsApp', href: '/superadmin/whatsapp', icon: ChatBubbleBottomCenterTextIcon },
       ];
     }
 
@@ -65,6 +66,7 @@ const Layout: React.FC = () => {
       { name: 'Equipe', href: '/manager/users', icon: UsersIcon },
       { name: 'Assistente IA', href: '/manager/ai-assistant', icon: SparklesIcon },
       { name: 'Relatórios', href: '/manager/reports', icon: ChartBarIcon },
+      { name: 'Conectar WhatsApp', href: '/manager/whatsapp', icon: ChatBubbleBottomCenterTextIcon },
     ];
   };
 
