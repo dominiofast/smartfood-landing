@@ -49,6 +49,48 @@ interface Store {
   createdAt: string;
 }
 
+// Interface para formato legado da Store
+interface LegacyStore {
+  id: string;
+  name: string;
+  description?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zip_code?: string;
+  logo_url?: string;
+  is_active?: boolean;
+  created_at?: string;
+  contact_phone?: string;
+  contact_email?: string;
+  address_street?: string;
+  address_city?: string;
+  address_state?: string;
+  address_zip_code?: string;
+  images_logo?: string;
+}
+
+// Interface simplificada para Store
+interface SimpleStore extends LegacyStore {
+  contact?: {
+    phone: string;
+    email: string;
+    whatsapp?: string;
+  };
+  whatsappApi?: {
+    controlId?: string;
+    host?: string;
+    instanceKey?: string;
+    token?: string;
+    webhook?: string;
+    isConnected?: boolean;
+    lastConnection?: Date;
+    qrCode?: string;
+  };
+}
+
 // Schema para edição de loja
 const editStoreSchema = yup.object({
   name: yup.string().required('Nome da loja é obrigatório'),
@@ -77,44 +119,6 @@ const editStoreSchema = yup.object({
 });
 
 type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
-
-// Interface simplificada para Store
-interface SimpleStore {
-  id: string;
-  name: string;
-  description?: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  logo_url?: string;
-  is_active?: boolean;
-  created_at?: string;
-  contact_phone?: string;
-  contact_email?: string;
-  address_street?: string;
-  address_city?: string;
-  address_state?: string;
-  address_zip_code?: string;
-  images_logo?: string;
-  contact?: {
-    phone: string;
-    email: string;
-    whatsapp?: string;
-  };
-  whatsappApi?: {
-    controlId?: string;
-    host?: string;
-    instanceKey?: string;
-    token?: string;
-    webhook?: string;
-    isConnected?: boolean;
-    lastConnection?: Date;
-    qrCode?: string;
-  };
-}
 
 // Schema para criação de loja
 const createStoreSchema = yup.object({
