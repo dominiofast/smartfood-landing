@@ -70,6 +70,15 @@ const Layout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Botão para abrir sidebar em telas pequenas */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg border border-gray-200 lg:hidden"
+        aria-label="Abrir menu lateral"
+      >
+        <Bars3Icon className="w-6 h-6 text-gray-700" />
+      </button>
+
       {/* Mobile sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
