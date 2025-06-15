@@ -1,12 +1,13 @@
 import React from 'react';
 import { useFormContext } from 'react-hook-form';
+import type { EditStoreFormData } from '../types/store';
 
 interface WhatsappApiSettingsProps {
   isVisible: boolean;
 }
 
 const WhatsappApiSettings: React.FC<WhatsappApiSettingsProps> = ({ isVisible }) => {
-  const { register, formState: { errors } } = useFormContext();
+  const { register, formState: { errors } } = useFormContext<EditStoreFormData>();
 
   if (!isVisible) return null;
 
@@ -29,7 +30,7 @@ const WhatsappApiSettings: React.FC<WhatsappApiSettingsProps> = ({ isVisible }) 
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             placeholder="Ex: e570acd2-2d6a-41b0-8fee-7253c9caa91c"
           />
-          {errors?.whatsappApi?.controlId && (
+          {errors.whatsappApi?.controlId?.message && (
             <p className="mt-1 text-sm text-red-600">{errors.whatsappApi.controlId.message}</p>
           )}
         </div>
@@ -44,7 +45,7 @@ const WhatsappApiSettings: React.FC<WhatsappApiSettingsProps> = ({ isVisible }) 
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             placeholder="Ex: apinocode01.megaapi.com.br"
           />
-          {errors?.whatsappApi?.host && (
+          {errors.whatsappApi?.host?.message && (
             <p className="mt-1 text-sm text-red-600">{errors.whatsappApi.host.message}</p>
           )}
         </div>
@@ -59,7 +60,7 @@ const WhatsappApiSettings: React.FC<WhatsappApiSettingsProps> = ({ isVisible }) 
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             placeholder="Ex: megacode-MDT3OHEGIyu"
           />
-          {errors?.whatsappApi?.instanceKey && (
+          {errors.whatsappApi?.instanceKey?.message && (
             <p className="mt-1 text-sm text-red-600">{errors.whatsappApi.instanceKey.message}</p>
           )}
         </div>
@@ -74,7 +75,7 @@ const WhatsappApiSettings: React.FC<WhatsappApiSettingsProps> = ({ isVisible }) 
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             placeholder="Ex: MDT3OHEGIyu"
           />
-          {errors?.whatsappApi?.token && (
+          {errors.whatsappApi?.token?.message && (
             <p className="mt-1 text-sm text-red-600">{errors.whatsappApi.token.message}</p>
           )}
         </div>
@@ -89,7 +90,7 @@ const WhatsappApiSettings: React.FC<WhatsappApiSettingsProps> = ({ isVisible }) 
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-green-500 focus:border-green-500"
             placeholder="Ex: https://dominio-menu-002.replit.app/api/webhook/whatsapp/3"
           />
-          {errors?.whatsappApi?.webhook && (
+          {errors.whatsappApi?.webhook?.message && (
             <p className="mt-1 text-sm text-red-600">{errors.whatsappApi.webhook.message}</p>
           )}
         </div>

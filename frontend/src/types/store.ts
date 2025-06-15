@@ -71,4 +71,31 @@ export interface SimpleStore extends LegacyStore {
     lastConnection?: Date;
     qrCode?: string;
   };
+}
+
+// Tipo para o formulário de edição de Store
+export interface EditStoreFormData {
+  name: string;
+  description?: string;
+  contact: {
+    phone: string;
+    email: string;
+    whatsapp?: string;
+  };
+  address: {
+    street: string;
+    number?: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  whatsappApi: {
+    controlId?: string;
+    host?: string;
+    instanceKey?: string;
+    token?: string;
+    webhook?: string;
+  };
 } 

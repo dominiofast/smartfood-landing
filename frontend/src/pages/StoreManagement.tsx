@@ -15,7 +15,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import WhatsappApiSettings from '../components/WhatsappApiSettings';
 import EditStoreForm from '../components/EditStoreForm';
-import { Store, SimpleStore } from '../types/store';
+import { Store, SimpleStore, EditStoreFormData } from '../types/store';
 
 // Schema para edição de loja
 const editStoreSchema = yup.object({
@@ -25,7 +25,7 @@ const editStoreSchema = yup.object({
     phone: yup.string().required('Telefone é obrigatório'),
     email: yup.string().email('Email inválido').required('Email é obrigatório'),
     whatsapp: yup.string()
-  }),
+  }).required(),
   address: yup.object({
     street: yup.string().required('Endereço é obrigatório'),
     number: yup.string(),
@@ -34,17 +34,15 @@ const editStoreSchema = yup.object({
     city: yup.string().required('Cidade é obrigatória'),
     state: yup.string().required('Estado é obrigatório'),
     zipCode: yup.string().required('CEP é obrigatório')
-  }),
+  }).required(),
   whatsappApi: yup.object({
     controlId: yup.string(),
     host: yup.string(),
     instanceKey: yup.string(),
     token: yup.string(),
     webhook: yup.string()
-  })
+  }).required().default({})
 });
-
-type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
 
 // Schema para criação de loja
 const createStoreSchema = yup.object({
