@@ -68,7 +68,7 @@ export default function MenuManager() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [newAdditionals, setNewAdditionals] = useState<{name: string, price: number}[]>([{ name: '', price: 0 }]);
+  const [newAdditionals, setNewAdditionals] = useState<{name: string, price: number, description?: string}[]>([{ name: '', price: 0, description: '' }]);
   const [productImage, setProductImage] = useState<string>('');
   const [additionalCategoryName, setAdditionalCategoryName] = useState<string>('');
   const [showCopyModal, setShowCopyModal] = useState(false);
@@ -483,7 +483,7 @@ export default function MenuManager() {
                             <button
                               onClick={() => {
                                 setSelectedProductId(product.id);
-                                setNewAdditionals([{ name: '', price: 0 }]);
+                                setNewAdditionals([{ name: '', price: 0, description: '' }]);
                                 setAdditionalCategoryName('');
                                 setShowAdditionalModal(true);
                               }}
@@ -950,7 +950,7 @@ export default function MenuManager() {
                 onClick={() => {
                   setShowAdditionalModal(false);
                   setSelectedProductId(null);
-                  setNewAdditionals([{ name: '', price: 0 }]);
+                  setNewAdditionals([{ name: '', price: 0, description: '' }]);
                   setAdditionalCategoryName('');
                 }}
                 className="text-gray-400 hover:text-gray-500"
@@ -997,7 +997,7 @@ export default function MenuManager() {
               
               setShowAdditionalModal(false);
               setSelectedProductId(null);
-              setNewAdditionals([{ name: '', price: 0 }]);
+              setNewAdditionals([{ name: '', price: 0, description: '' }]);
               setAdditionalCategoryName('');
             }}>
               <div className="space-y-4">
@@ -1089,7 +1089,7 @@ export default function MenuManager() {
                 <button
                   type="button"
                   onClick={() => {
-                    setNewAdditionals([...newAdditionals, { name: '', price: 0 }]);
+                    setNewAdditionals([...newAdditionals, { name: '', price: 0, description: '' }]);
                   }}
                   className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-md text-sm font-medium text-gray-600 hover:border-gray-400 hover:text-gray-700"
                 >
@@ -1104,7 +1104,7 @@ export default function MenuManager() {
                   onClick={() => {
                     setShowAdditionalModal(false);
                     setSelectedProductId(null);
-                    setNewAdditionals([{ name: '', price: 0 }]);
+                    setNewAdditionals([{ name: '', price: 0, description: '' }]);
                     setAdditionalCategoryName('');
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
