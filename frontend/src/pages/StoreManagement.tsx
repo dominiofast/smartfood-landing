@@ -92,8 +92,6 @@ interface SimpleStore {
   logo_url?: string;
   is_active?: boolean;
   created_at?: string;
-  
-  // Campos do banco de dados
   contact_phone?: string;
   contact_email?: string;
   address_street?: string;
@@ -101,8 +99,6 @@ interface SimpleStore {
   address_state?: string;
   address_zip_code?: string;
   images_logo?: string;
-
-  // Campos opcionais da Store completa
   contact?: {
     phone: string;
     email: string;
