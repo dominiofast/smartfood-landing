@@ -30,6 +30,7 @@ const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [teamExpanded, setTeamExpanded] = useState(false);
 
   const getMenuItems = () => {
     const baseItems = [
@@ -175,6 +176,48 @@ const Layout: React.FC = () => {
           <nav className="flex-1 px-4 py-4 space-y-1">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.href;
+              if (item.name === 'Equipe') {
+                return (
+                  <div key={item.name}>
+                    <button
+                      onClick={() => setTeamExpanded(!teamExpanded)}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${
+                        location.pathname.startsWith('/manager/users')
+                          ? 'bg-primary-100 text-primary-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.name}</span>
+                      {teamExpanded ? <ChevronDownIcon className="w-4 h-4 ml-auto" /> : <ChevronRightIcon className="w-4 h-4 ml-auto" />}
+                    </button>
+                    {teamExpanded && (
+                      <div className="ml-8 mt-1 space-y-1">
+                        <Link
+                          to="/manager/users"
+                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                            location.pathname === '/manager/users'
+                              ? 'bg-primary-100 text-primary-700'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Gerenciar Usuários
+                        </Link>
+                        <Link
+                          to="/manager/users/add"
+                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                            location.pathname === '/manager/users/add'
+                              ? 'bg-primary-100 text-primary-700'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Adicionar Funcionário
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={item.name}

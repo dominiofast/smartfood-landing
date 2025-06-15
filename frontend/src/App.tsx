@@ -18,6 +18,7 @@ import DigitalMenu from './pages/DigitalMenu';
 import DigitalMenuSettings from './pages/DigitalMenuSettings';
 import Customers from './pages/Customers';
 import PDV from './pages/PDV';
+import AddEmployee from './pages/AddEmployee';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -84,6 +85,7 @@ function App() {
                   <Route path="store" element={<StoreManagement />} />
                   <Route path="customers" element={<Customers />} />
                   <Route path="users" element={<UserManagement />} />
+                  <Route path="users/add" element={<AddEmployee />} />
                   <Route path="ai-assistant" element={<AIAssistant />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="settings/digital-menu" element={<DigitalMenuSettings />} />
