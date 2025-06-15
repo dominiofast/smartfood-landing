@@ -142,7 +142,7 @@ export default function StoreManagement() {
     if (user.role === 'manager') {
       const userStoreId = user.store?.id;
       const storeId = store.id;
-      const hasPermission = user.store && userStoreId === storeId;
+      const hasPermission = !!(user.store && userStoreId === storeId);
       
       console.log('Verificando permissão para manager:', {
         userStoreId,
