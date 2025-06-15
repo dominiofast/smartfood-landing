@@ -6,8 +6,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 
-// Carregar variáveis de ambiente
-dotenv.config({ path: '../.env' });
+// Carregar variáveis de ambiente do diretório atual
+dotenv.config();
 
 // Conectar ao banco de dados
 connectDB();
