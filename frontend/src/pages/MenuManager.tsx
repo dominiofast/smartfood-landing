@@ -74,6 +74,9 @@ export default function MenuManager() {
   const [showCopyModal, setShowCopyModal] = useState(false);
   const [categoryToCopy, setCategoryToCopy] = useState<AdditionalCategory | null>(null);
   const [sourceProductId, setSourceProductId] = useState<number | null>(null);
+  // Adicionar estados para edição inline de adicionais
+  const [editingAdditional, setEditingAdditional] = useState<{productId: number, categoryId: number, itemId: number} | null>(null);
+  const [editingAdditionalData, setEditingAdditionalData] = useState<{name: string, description?: string, price: number}>({ name: '', description: '', price: 0 });
 
   // Função para salvar categorias e produtos no localStorage
   const saveMenuData = useCallback((data: Category[]) => {
@@ -520,17 +523,99 @@ export default function MenuManager() {
                                     </div>
                                   </div>
                                   <div className="space-y-1">
-                                    {category.items.map((item) => (
-                                      <div key={item.id} className="flex flex-col md:flex-row md:items-center md:justify-between text-sm">
-                                        <div>
-                                          <span className="text-gray-600 font-medium">{item.name}</span>
-                                          {item.description && (
-                                            <span className="block text-xs text-gray-500 mt-1">{item.description}</span>
+                                    {category.items.map((item) => {
+                                      const isEditing = editingAdditional && editingAdditional.productId === product.id && editingAdditional.categoryId === category.id && editingAdditional.itemId === item.id;
+                                      return (
+                                        <div key={item.id} className="flex flex-col md:flex-row md:items-center md:justify-between text-sm">
+                                          {isEditing ? (
+                                            <div className="flex-1 space-y-2">
+                                              <input
+                                                type="text"
+                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm mb-1"
+                                                value={editingAdditionalData.name}
+                                                onChange={e => setEditingAdditionalData({...editingAdditionalData, name: e.target.value})}
+                                                placeholder="Nome do adicional"
+                                              />
+                                              <textarea
+                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-xs mb-1"
+                                                value={editingAdditionalData.description || ''}
+                                                onChange={e => setEditingAdditionalData({...editingAdditionalData, description: e.target.value})}
+                                                placeholder="Descrição do adicional (opcional)"
+                                                rows={2}
+                                              />
+                                              <input
+                                                type="number"
+                                                step="0.01"
+                                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm mb-1"
+                                                value={editingAdditionalData.price}
+                                                onChange={e => setEditingAdditionalData({...editingAdditionalData, price: parseFloat(e.target.value) || 0})}
+                                                placeholder="Preço"
+                                              />
+                                              <div className="flex space-x-2 mt-1">
+                                                <button
+                                                  type="button"
+                                                  className="px-3 py-1 bg-primary-600 text-white rounded text-xs font-medium hover:bg-primary-700"
+                                                  onClick={() => {
+                                                    // Atualizar adicional na lista
+                                                    const updatedCategories = categories.map(cat => ({
+                                                      ...cat,
+                                                      products: cat.products.map(prod => {
+                                                        if (prod.id === product.id) {
+                                                          return {
+                                                            ...prod,
+                                                            additionalCategories: prod.additionalCategories?.map(acat => {
+                                                              if (acat.id === category.id) {
+                                                                return {
+                                                                  ...acat,
+                                                                  items: acat.items.map(ai => ai.id === item.id ? { ...ai, ...editingAdditionalData } : ai)
+                                                                };
+                                                              }
+                                                              return acat;
+                                                            })
+                                                          };
+                                                        }
+                                                        return prod;
+                                                      })
+                                                    }));
+                                                    setCategories(updatedCategories);
+                                                    saveMenuData(updatedCategories);
+                                                    setEditingAdditional(null);
+                                                  }}
+                                                >Salvar</button>
+                                                <button
+                                                  type="button"
+                                                  className="px-3 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 hover:bg-gray-50"
+                                                  onClick={() => setEditingAdditional(null)}
+                                                >Cancelar</button>
+                                              </div>
+                                            </div>
+                                          ) : (
+                                            <div className="flex-1">
+                                              <span className="text-gray-600 font-medium">{item.name}</span>
+                                              {item.description && (
+                                                <span className="block text-xs text-gray-500 mt-1">{item.description}</span>
+                                              )}
+                                            </div>
                                           )}
+                                          <div className="flex items-center space-x-2 mt-2 md:mt-0">
+                                            <span className="text-gray-900 font-medium">+{formatCurrency(item.price)}</span>
+                                            {!isEditing && (
+                                              <button
+                                                type="button"
+                                                className="text-gray-500 hover:text-primary-600 ml-2"
+                                                title="Editar adicional"
+                                                onClick={() => {
+                                                  setEditingAdditional({ productId: product.id, categoryId: category.id, itemId: item.id });
+                                                  setEditingAdditionalData({ name: item.name, description: item.description, price: item.price });
+                                                }}
+                                              >
+                                                <PencilIcon className="w-4 h-4" />
+                                              </button>
+                                            )}
+                                          </div>
                                         </div>
-                                        <span className="text-gray-900 font-medium">+{formatCurrency(item.price)}</span>
-                                      </div>
-                                    ))}
+                                      );
+                                    })}
                                   </div>
                                 </div>
                               ))}
