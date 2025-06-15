@@ -111,8 +111,30 @@ export default function StoreManagement() {
 
   // Verificar se o usuário pode editar a loja
   const canEditStore = (store: SimpleStore): boolean => {
-    if (user?.role === 'superadmin') return true;
-    if (user?.role === 'manager' && user.store?.id === store.id) return true;
+    // Se não há usuário ou store, não pode editar
+    if (!user || !store) {
+      console.log('Sem permissão: usuário ou loja não encontrados', { user, store });
+      return false;
+    }
+
+    // Superadmin pode editar qualquer loja
+    if (user.role === 'superadmin') {
+      console.log('Permissão concedida: usuário é superadmin');
+      return true;
+    }
+
+    // Manager só pode editar sua própria loja
+    if (user.role === 'manager') {
+      const hasPermission = !!user.store && user.store.id === store.id;
+      console.log('Verificando permissão para manager:', {
+        userStoreId: user.store?.id,
+        storeId: store.id,
+        hasPermission
+      });
+      return hasPermission;
+    }
+
+    console.log('Sem permissão: role não autorizada', { userRole: user.role });
     return false;
   };
 
@@ -228,6 +250,12 @@ export default function StoreManagement() {
 
   // Abrir modal de edição
   const handleEdit = (store: SimpleStore) => {
+    console.log('Iniciando edição da loja:', {
+      storeId: store.id,
+      storeName: store.name,
+      currentUser: user
+    });
+
     setSelectedStore(store);
     setValueEdit('name', store.name);
     setValueEdit('description', store.description || '');
@@ -246,6 +274,8 @@ export default function StoreManagement() {
     setValueEdit('whatsappApi.instanceKey', store.whatsappApi?.instanceKey || '');
     setValueEdit('whatsappApi.token', store.whatsappApi?.token || '');
     setValueEdit('whatsappApi.webhook', store.whatsappApi?.webhook || '');
+
+    console.log('Valores definidos no formulário de edição');
     setIsEditModalOpen(true);
   };
 
