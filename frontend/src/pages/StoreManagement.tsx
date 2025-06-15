@@ -227,23 +227,34 @@ export default function StoreManagement() {
       
       if (data.success && Array.isArray(data.stores)) {
         // Garantir que os dados da WhatsApp API sejam mantidos
-        const processedStores = data.stores.map((store: SimpleStore) => ({
-          ...store,
-          whatsappApi: store.whatsappApi || {
-            controlId: null,
-            host: null,
-            instanceKey: null,
-            token: null,
-            webhook: null
-          }
-        }));
+        const processedStores = data.stores.map((store: SimpleStore) => {
+          // Preservar os dados existentes do WhatsApp API
+          const existingStore = stores.find(s => s.id === store.id);
+          const whatsappApi = store.whatsappApi || existingStore?.whatsappApi || {
+            controlId: undefined,
+            host: undefined,
+            instanceKey: undefined,
+            token: undefined,
+            webhook: undefined
+          };
+
+          return {
+            ...store,
+            whatsappApi
+          };
+        });
+
+        console.log('Lojas processadas e carregadas:', {
+          totalStores: processedStores.length,
+          firstStore: processedStores[0],
+          whatsappApiData: processedStores.map(store => ({
+            id: store.id,
+            whatsappApi: store.whatsappApi
+          }))
+        });
 
         setStores(processedStores);
         setFilteredStores(processedStores);
-        console.log('Lojas processadas e carregadas:', {
-          totalStores: processedStores.length,
-          firstStore: processedStores[0]
-        });
       } else {
         console.log('Nenhuma loja encontrada ou formato inválido:', data);
         setStores([]);
@@ -522,13 +533,29 @@ export default function StoreManagement() {
       const result = await response.json();
       console.log('Resposta do servidor após atualização:', result);
       
+      // Atualizar a loja no estado local antes de recarregar
+      const updatedStore = {
+        ...selectedStore,
+        ...updateData,
+        whatsappApi: updateData.whatsappApi
+      };
+      
+      setStores(prevStores => 
+        prevStores.map((store: SimpleStore) => 
+          store.id === selectedStore.id ? updatedStore : store
+        )
+      );
+      
       toast.success('Loja atualizada com sucesso!');
       setIsEditModalOpen(false);
       resetEdit();
       setSelectedStore(null);
       
-      // Recarregar os dados da loja imediatamente após a atualização
-      await loadStores();
+      // Recarregar os dados da loja em segundo plano
+      loadStores().catch(error => {
+        console.error('Erro ao recarregar lojas:', error);
+        // Se falhar ao recarregar, pelo menos os dados locais já foram atualizados
+      });
     } catch (error: any) {
       console.error('Erro ao atualizar loja:', error);
       toast.error(error.message || 'Erro ao atualizar loja');
