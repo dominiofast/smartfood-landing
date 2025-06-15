@@ -311,7 +311,7 @@ const Layout: React.FC = () => {
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"}>
         {/* Top bar */}
         <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
           <div className="px-4 sm:px-6 lg:px-8">
