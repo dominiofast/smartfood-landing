@@ -117,7 +117,8 @@ export default function StoreManagement() {
       userRole: user?.role,
       storeExists: !!store,
       storeId: store?.id,
-      storeName: store?.name
+      storeName: store?.name,
+      storeData: store
     });
 
     // Se não há usuário ou store, não pode editar
@@ -131,7 +132,8 @@ export default function StoreManagement() {
       console.log('Permissão concedida: usuário é superadmin', {
         userId: user.id,
         userRole: user.role,
-        storeId: store.id
+        storeId: store.id,
+        storeName: store.name
       });
       return true;
     }
@@ -142,12 +144,17 @@ export default function StoreManagement() {
       console.log('Verificando permissão para manager:', {
         userStoreId: user.store?.id,
         storeId: store.id,
-        hasPermission
+        hasPermission,
+        userStore: user.store
       });
       return hasPermission;
     }
 
-    console.log('Sem permissão: role não autorizada', { userRole: user.role });
+    console.log('Sem permissão: role não autorizada', { 
+      userRole: user.role,
+      userId: user.id,
+      storeId: store.id
+    });
     return false;
   };
 
@@ -167,6 +174,13 @@ export default function StoreManagement() {
         (store.address_street && store.address_street.toLowerCase().includes(term))
       );
     }
+    
+    console.log('Lojas filtradas:', {
+      searchTerm,
+      totalStores: stores.length,
+      filteredCount: filtered.length,
+      filtered
+    });
     
     setFilteredStores(filtered);
   }, [searchTerm, stores]);
@@ -654,37 +668,50 @@ export default function StoreManagement() {
                     }
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {canEditStore(store) ? (
-                      <>
-                        <button
-                          onClick={() => handleEdit(store)}
-                          className="text-primary-600 hover:text-primary-900 mr-3"
-                          title="Gerenciar loja"
-                        >
-                          Gerenciar
-                        </button>
-                        {isSuperAdmin && (
-                          <>
-                            <button
-                              onClick={() => handleCreateManager(store)}
-                              className="text-green-600 hover:text-green-900 mr-3"
-                              title="Criar dono da loja"
-                            >
-                              <UserPlusIcon className="w-5 h-5 inline" />
-                              Criar Dono
-                            </button>
-                            <button
-                              className="text-red-600 hover:text-red-900"
-                              title="Excluir loja"
-                            >
-                              Excluir
-                            </button>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
+                    {(() => {
+                      const canEdit = canEditStore(store);
+                      console.log('Renderizando botões de ação:', {
+                        storeName: store.name,
+                        storeId: store.id,
+                        canEdit,
+                        isSuperAdmin,
+                        userRole: user?.role
+                      });
+
+                      if (!canEdit) {
+                        return <span className="text-gray-400">-</span>;
+                      }
+
+                      return (
+                        <>
+                          <button
+                            onClick={() => handleEdit(store)}
+                            className="text-primary-600 hover:text-primary-900 mr-3"
+                            title="Gerenciar loja"
+                          >
+                            Gerenciar
+                          </button>
+                          {isSuperAdmin && (
+                            <>
+                              <button
+                                onClick={() => handleCreateManager(store)}
+                                className="text-green-600 hover:text-green-900 mr-3"
+                                title="Criar dono da loja"
+                              >
+                                <UserPlusIcon className="w-5 h-5 inline" />
+                                Criar Dono
+                              </button>
+                              <button
+                                className="text-red-600 hover:text-red-900"
+                                title="Excluir loja"
+                              >
+                                Excluir
+                              </button>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
                 </motion.tr>
               ))}
