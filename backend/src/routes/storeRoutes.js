@@ -7,7 +7,9 @@ const {
   updateStore,
   deleteStore,
   getStoreStats,
-  getSuperAdminDashboard
+  getSuperAdminDashboard,
+  updateLogo,
+  updateBanners
 } = require('../controllers/storeController');
 const { protect, authorize, isSuperAdmin } = require('../middleware/auth');
 
@@ -30,5 +32,9 @@ router.route('/:id')
 
 // Estatísticas da loja
 router.get('/:id/stats', getStoreStats);
+
+// Rotas para logo e banners
+router.put('/:id/logo', updateLogo);
+router.put('/:id/banners', updateBanners);
 
 module.exports = router; 

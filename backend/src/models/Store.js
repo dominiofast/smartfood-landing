@@ -177,6 +177,11 @@ const storeSchema = new mongoose.Schema({
     cover: String,
     gallery: [String]
   },
+  banners: [{
+    image: String,
+    title: String,
+    description: String
+  }],
   socialMedia: {
     facebook: String,
     instagram: String,

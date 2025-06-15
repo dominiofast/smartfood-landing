@@ -254,4 +254,46 @@ exports.getSuperAdminDashboard = async (req, res) => {
       error: err.message
     });
   }
+};
+
+// Atualizar logo da loja
+exports.updateLogo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { logo } = req.body;
+    let store = await Store.findById(id);
+    if (!store) {
+      return res.status(404).json({ success: false, error: 'Loja não encontrada' });
+    }
+    // Permissão
+    if (req.user.role !== 'superadmin' && req.user.store.toString() !== store._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Não autorizado' });
+    }
+    store.images.logo = logo;
+    await store.save();
+    res.status(200).json({ success: true, data: store });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
+};
+
+// Atualizar banners da loja
+exports.updateBanners = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { banners } = req.body;
+    let store = await Store.findById(id);
+    if (!store) {
+      return res.status(404).json({ success: false, error: 'Loja não encontrada' });
+    }
+    // Permissão
+    if (req.user.role !== 'superadmin' && req.user.store.toString() !== store._id.toString()) {
+      return res.status(403).json({ success: false, error: 'Não autorizado' });
+    }
+    store.banners = banners;
+    await store.save();
+    res.status(200).json({ success: true, data: store });
+  } catch (err) {
+    res.status(400).json({ success: false, error: err.message });
+  }
 }; 

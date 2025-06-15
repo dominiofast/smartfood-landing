@@ -56,7 +56,6 @@ const Layout: React.FC = () => {
     return [
       { name: 'Pedidos', href: '/manager/orders', icon: ShoppingBagIcon },
       { name: 'Pedidos PDV', href: '/manager/pdv', icon: ComputerDesktopIcon },
-      { name: 'PDV', href: '/manager/pdv', icon: ComputerDesktopIcon },
       { name: 'Gestor de Cardápio', href: '/manager/menu', icon: ClipboardDocumentListIcon },
       { name: 'Minha Loja', href: '/manager/store', icon: BuildingStorefrontIcon },
       { name: 'Meus Clientes', href: '/manager/customers', icon: UserGroupIcon },
