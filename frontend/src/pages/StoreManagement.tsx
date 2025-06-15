@@ -247,7 +247,7 @@ export default function StoreManagement() {
         console.log('Lojas processadas e carregadas:', {
           totalStores: processedStores.length,
           firstStore: processedStores[0],
-          whatsappApiData: processedStores.map(store => ({
+          whatsappApiData: processedStores.map((store: SimpleStore) => ({
             id: store.id,
             whatsappApi: store.whatsappApi
           }))
