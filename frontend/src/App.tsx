@@ -15,6 +15,8 @@ import Reports from './pages/Reports';
 import Orders from './pages/Orders';
 import MenuManager from './pages/MenuManager';
 import DigitalMenu from './pages/DigitalMenu';
+import DigitalMenuSettings from './pages/DigitalMenuSettings';
+import Customers from './pages/Customers';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -55,6 +57,7 @@ function App() {
             <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/menu" element={<DigitalMenu />} />
+            <Route path="/menu/:storeId" element={<DigitalMenu />} />
             
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
@@ -68,6 +71,7 @@ function App() {
                   <Route path="menu" element={<MenuManager />} />
                   <Route path="ai-assistant" element={<AIAssistant />} />
                   <Route path="reports" element={<Reports />} />
+                  <Route path="settings/digital-menu" element={<DigitalMenuSettings />} />
                 </Route>
                 
                 {/* Manager Routes */}
@@ -76,9 +80,11 @@ function App() {
                   <Route path="orders" element={<Orders />} />
                   <Route path="menu" element={<MenuManager />} />
                   <Route path="store" element={<StoreManagement />} />
+                  <Route path="customers" element={<Customers />} />
                   <Route path="users" element={<UserManagement />} />
                   <Route path="ai-assistant" element={<AIAssistant />} />
                   <Route path="reports" element={<Reports />} />
+                  <Route path="settings/digital-menu" element={<DigitalMenuSettings />} />
                 </Route>
               </Route>
             </Route>

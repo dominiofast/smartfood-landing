@@ -16,6 +16,11 @@ import {
   BellIcon,
   ShoppingBagIcon,
   ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  DocumentTextIcon,
+  UserGroupIcon,
 } from '@heroicons/react/24/outline';
 
 const Layout: React.FC = () => {
@@ -23,6 +28,7 @@ const Layout: React.FC = () => {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
 
   const getMenuItems = () => {
     const baseItems = [
@@ -111,6 +117,54 @@ const Layout: React.FC = () => {
                       </Link>
                     );
                   })}
+                  
+                  {/* Configurações com submenu */}
+                  <div className="mt-4">
+                    <button
+                      onClick={() => setSettingsExpanded(!settingsExpanded)}
+                      className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Cog6ToothIcon className="w-5 h-5" />
+                        <span>Configurações</span>
+                      </div>
+                      {settingsExpanded ? (
+                        <ChevronDownIcon className="w-4 h-4" />
+                      ) : (
+                        <ChevronRightIcon className="w-4 h-4" />
+                      )}
+                    </button>
+                    {settingsExpanded && (
+                      <div className="mt-1 ml-8 space-y-1">
+                        <Link
+                          to={user?.role === 'superadmin' ? '/superadmin/settings/digital-menu' : '/manager/settings/digital-menu'}
+                          onClick={() => setSidebarOpen(false)}
+                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                            location.pathname.includes('/settings/digital-menu')
+                              ? 'bg-primary-100 text-primary-700'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Cardápio Digital
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Meus Clientes - apenas para managers */}
+                  {user?.role === 'manager' && (
+                    <Link
+                      to="/manager/customers"
+                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        location.pathname === '/manager/customers'
+                          ? 'bg-primary-100 text-primary-900'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <UserGroupIcon className="w-5 h-5 mr-3" />
+                      Meus Clientes
+                    </Link>
+                  )}
                 </nav>
               </div>
             </motion.div>
@@ -147,6 +201,38 @@ const Layout: React.FC = () => {
                 </Link>
               );
             })}
+            
+            {/* Configurações com submenu */}
+            <div className="mt-4">
+              <button
+                onClick={() => setSettingsExpanded(!settingsExpanded)}
+                className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <Cog6ToothIcon className="w-5 h-5" />
+                  <span>Configurações</span>
+                </div>
+                {settingsExpanded ? (
+                  <ChevronDownIcon className="w-4 h-4" />
+                ) : (
+                  <ChevronRightIcon className="w-4 h-4" />
+                )}
+              </button>
+              {settingsExpanded && (
+                <div className="mt-1 ml-8 space-y-1">
+                  <Link
+                    to={user?.role === 'superadmin' ? '/superadmin/settings/digital-menu' : '/manager/settings/digital-menu'}
+                    className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                      location.pathname.includes('/settings/digital-menu')
+                        ? 'bg-primary-100 text-primary-700'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    Cardápio Digital
+                  </Link>
+                </div>
+              )}
+            </div>
           </nav>
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center space-x-3 mb-4">
@@ -181,16 +267,18 @@ const Layout: React.FC = () => {
               </button>
 
               <div className="flex-1 flex items-center justify-end space-x-4">
-                {/* Cardápio Digital Button */}
-                <a
-                  href="/menu"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-                >
-                  <ClipboardDocumentListIcon className="w-5 h-5" />
-                  <span>Cardápio Digital</span>
-                </a>
+                {/* Botão Cardápio Digital */}
+                {user && (
+                  <a
+                    href={user.store?.id ? `/menu/${user.store.id}` : '/menu'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center"
+                  >
+                    <DocumentTextIcon className="w-5 h-5 mr-2" />
+                    Cardápio Digital
+                  </a>
+                )}
 
                 {/* AI Status Indicator */}
                 <div className="flex items-center space-x-2 text-sm text-gray-600">

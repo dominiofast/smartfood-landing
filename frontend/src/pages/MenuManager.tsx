@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   PlusIcon,
@@ -13,6 +13,7 @@ import {
   ArrowUpTrayIcon,
   DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
+import { useAuth } from '../contexts/AuthContext';
 
 // Tipos
 interface AdditionalItem {
@@ -53,6 +54,7 @@ interface Category {
 }
 
 export default function MenuManager() {
+  const { user } = useAuth();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggedItem, setDraggedItem] = useState<{type: 'category' | 'product' | 'additional', item: any} | null>(null);
@@ -72,9 +74,23 @@ export default function MenuManager() {
   const [categoryToCopy, setCategoryToCopy] = useState<AdditionalCategory | null>(null);
   const [sourceProductId, setSourceProductId] = useState<number | null>(null);
 
-  // Dados mockados para demonstração
+  // Função para salvar categorias e produtos no localStorage
+  const saveMenuData = useCallback((data: Category[]) => {
+    if (!user?.store?.id) return;
+    
+    const storageKey = `storeMenuData_${user.store.id}`;
+    const menuData = {
+      categories: data,
+      updatedAt: new Date().toISOString()
+    };
+    
+    localStorage.setItem(storageKey, JSON.stringify(menuData));
+    console.log('Menu data saved:', menuData);
+  }, [user]);
+
+  // Carregar dados do menu ao iniciar
   useEffect(() => {
-    setTimeout(() => {
+    const loadMockData = () => {
       const mockCategories: Category[] = [
         {
           id: 1,
@@ -140,9 +156,33 @@ export default function MenuManager() {
         }
       ];
       setCategories(mockCategories);
+      saveMenuData(mockCategories);
       setLoading(false);
-    }, 1000);
-  }, []);
+    };
+
+    if (!user?.store?.id) {
+      setLoading(false);
+      return;
+    }
+    
+    const storageKey = `storeMenuData_${user.store.id}`;
+    const savedData = localStorage.getItem(storageKey);
+    
+    if (savedData) {
+      try {
+        const menuData = JSON.parse(savedData);
+        setCategories(menuData.categories || []);
+        setLoading(false);
+      } catch (error) {
+        console.error('Erro ao carregar dados do menu:', error);
+        // Se houver erro, carrega dados mockados
+        loadMockData();
+      }
+    } else {
+      // Se não houver dados salvos, carrega dados mockados
+      loadMockData();
+    }
+  }, [user, saveMenuData]);
 
   // Funções de drag and drop
   const handleDragStart = (e: React.DragEvent, type: 'category' | 'product' | 'additional', item: any) => {
@@ -199,7 +239,60 @@ export default function MenuManager() {
     }
 
     setCategories(newCategories);
+    saveMenuData(newCategories); // Salvar após reordenar
     setDraggedItem(null);
+  };
+
+  // Função para excluir categoria
+  const deleteCategory = (categoryId: number) => {
+    if (window.confirm('Tem certeza que deseja excluir esta categoria e todos os seus produtos?')) {
+      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
+      // Reordenar categorias restantes
+      updatedCategories.forEach((cat, index) => {
+        cat.order = index + 1;
+      });
+      setCategories(updatedCategories);
+      saveMenuData(updatedCategories);
+    }
+  };
+
+  // Função para excluir produto
+  const deleteProduct = (productId: number, categoryId: number) => {
+    if (window.confirm('Tem certeza que deseja excluir este produto?')) {
+      const updatedCategories = categories.map(cat => {
+        if (cat.id === categoryId) {
+          const updatedProducts = cat.products.filter(prod => prod.id !== productId);
+          // Reordenar produtos restantes
+          updatedProducts.forEach((prod, index) => {
+            prod.order = index + 1;
+          });
+          return { ...cat, products: updatedProducts };
+        }
+        return cat;
+      });
+      setCategories(updatedCategories);
+      saveMenuData(updatedCategories);
+    }
+  };
+
+  // Função para excluir categoria de adicional
+  const deleteAdditionalCategory = (productId: number, additionalCategoryId: number) => {
+    if (window.confirm('Tem certeza que deseja excluir esta categoria de adicionais?')) {
+      const updatedCategories = categories.map(cat => ({
+        ...cat,
+        products: cat.products.map(prod => {
+          if (prod.id === productId) {
+            const updatedAdditionals = (prod.additionalCategories || []).filter(
+              ac => ac.id !== additionalCategoryId
+            );
+            return { ...prod, additionalCategories: updatedAdditionals };
+          }
+          return prod;
+        })
+      }));
+      setCategories(updatedCategories);
+      saveMenuData(updatedCategories);
+    }
   };
 
   // Toggle expandir/colapsar categoria
@@ -306,6 +399,7 @@ export default function MenuManager() {
                   <PencilIcon className="w-5 h-5" />
                 </button>
                 <button
+                  onClick={() => deleteCategory(category.id)}
                   className="text-red-600 hover:text-red-700"
                   title="Excluir categoria"
                 >
@@ -369,6 +463,7 @@ export default function MenuManager() {
                             <PencilIcon className="w-5 h-5" />
                           </button>
                           <button
+                            onClick={() => deleteProduct(product.id, product.category_id)}
                             className="text-red-600 hover:text-red-700"
                             title="Excluir produto"
                           >
@@ -415,7 +510,10 @@ export default function MenuManager() {
                                       >
                                         <DocumentDuplicateIcon className="w-4 h-4" />
                                       </button>
-                                      <button className="text-red-500 hover:text-red-600">
+                                      <button 
+                                        onClick={() => deleteAdditionalCategory(product.id, category.id)}
+                                        className="text-red-500 hover:text-red-600"
+                                      >
                                         <TrashIcon className="w-4 h-4" />
                                       </button>
                                     </div>
@@ -469,8 +567,39 @@ export default function MenuManager() {
             </div>
             <form className="p-6" onSubmit={(e) => {
               e.preventDefault();
-              // TODO: Implementar lógica de salvar categoria
-              console.log('Salvando categoria...');
+              const formData = new FormData(e.currentTarget);
+              
+              if (editingCategory) {
+                // Editar categoria existente
+                const updatedCategories = categories.map(cat => 
+                  cat.id === editingCategory.id 
+                    ? {
+                        ...cat,
+                        name: formData.get('name') as string,
+                        description: formData.get('description') as string,
+                        icon: formData.get('icon') as string
+                      }
+                    : cat
+                );
+                setCategories(updatedCategories);
+                saveMenuData(updatedCategories);
+              } else {
+                // Criar nova categoria
+                const newCategory: Category = {
+                  id: Date.now(),
+                  name: formData.get('name') as string,
+                  description: formData.get('description') as string,
+                  icon: formData.get('icon') as string,
+                  is_active: true,
+                  order: categories.length + 1,
+                  expanded: true,
+                  products: []
+                };
+                const updatedCategories = [...categories, newCategory];
+                setCategories(updatedCategories);
+                saveMenuData(updatedCategories);
+              }
+              
               setShowCategoryModal(false);
               setEditingCategory(null);
             }}>
@@ -479,14 +608,17 @@ export default function MenuManager() {
                   <label className="block text-sm font-medium text-gray-700">Nome</label>
                   <input
                     type="text"
+                    name="name"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                     placeholder="Ex: Pizzas Especiais"
                     defaultValue={editingCategory?.name}
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Descrição</label>
                   <textarea
+                    name="description"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                     rows={3}
                     placeholder="Descrição da categoria (opcional)"
@@ -497,6 +629,7 @@ export default function MenuManager() {
                   <label className="block text-sm font-medium text-gray-700">Ícone</label>
                   <input
                     type="text"
+                    name="icon"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                     placeholder="Ex: 🍕"
                     defaultValue={editingCategory?.icon}
@@ -551,8 +684,47 @@ export default function MenuManager() {
             </div>
             <form className="p-6" onSubmit={(e) => {
               e.preventDefault();
-              // TODO: Implementar lógica de salvar produto
-              console.log('Salvando produto...');
+              const formData = new FormData(e.currentTarget);
+              
+              const productData = {
+                name: formData.get('name') as string,
+                description: formData.get('description') as string,
+                price: parseFloat(formData.get('price') as string),
+                image: productImage
+              };
+              
+              if (editingProduct) {
+                // Editar produto existente
+                const updatedCategories = categories.map(cat => ({
+                  ...cat,
+                  products: cat.products.map(prod => 
+                    prod.id === editingProduct.id 
+                      ? { ...prod, ...productData }
+                      : prod
+                  )
+                }));
+                setCategories(updatedCategories);
+                saveMenuData(updatedCategories);
+              } else {
+                // Criar novo produto
+                const newProduct: Product = {
+                  id: Date.now(),
+                  ...productData,
+                  category_id: selectedCategoryId!,
+                  is_active: true,
+                  order: categories.find(c => c.id === selectedCategoryId)?.products.length || 0 + 1,
+                  additionalCategories: []
+                };
+                
+                const updatedCategories = categories.map(cat => 
+                  cat.id === selectedCategoryId 
+                    ? { ...cat, products: [...cat.products, newProduct] }
+                    : cat
+                );
+                setCategories(updatedCategories);
+                saveMenuData(updatedCategories);
+              }
+              
               setShowProductModal(false);
               setEditingProduct(null);
               setProductImage('');
@@ -562,14 +734,17 @@ export default function MenuManager() {
                   <label className="block text-sm font-medium text-gray-700">Nome</label>
                   <input
                     type="text"
+                    name="name"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                     placeholder="Ex: Pizza Margherita"
                     defaultValue={editingProduct?.name}
+                    required
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Descrição</label>
                   <textarea
+                    name="description"
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                     rows={3}
                     placeholder="Ingredientes e detalhes do produto"
@@ -584,10 +759,12 @@ export default function MenuManager() {
                     </div>
                     <input
                       type="number"
+                      name="price"
                       step="0.01"
                       className="pl-12 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
                       placeholder="0,00"
                       defaultValue={editingProduct?.price}
+                      required
                     />
                   </div>
                 </div>
@@ -724,6 +901,7 @@ export default function MenuManager() {
                   })
                 }));
                 setCategories(newCategories);
+                saveMenuData(newCategories); // Salvar após adicionar categoria de adicionais
               }
               
               setShowAdditionalModal(false);
