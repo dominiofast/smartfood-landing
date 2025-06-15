@@ -227,7 +227,7 @@ export default function StoreManagement() {
       
       if (data.success && Array.isArray(data.stores)) {
         // Garantir que os dados da WhatsApp API sejam mantidos
-        const processedStores = data.stores.map(store => ({
+        const processedStores = data.stores.map((store: SimpleStore) => ({
           ...store,
           whatsappApi: store.whatsappApi || {
             controlId: null,
