@@ -6,63 +6,7 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import WhatsappApiSettings from './WhatsappApiSettings';
-
-// Interface para Store
-interface Store {
-  id: string;
-  name: string;
-  description?: string;
-  contact: {
-    phone: string;
-    email: string;
-    whatsapp?: string;
-  };
-  address: {
-    street: string;
-    number?: string;
-    complement?: string;
-    neighborhood: string;
-    city: string;
-    state: string;
-    zipCode: string;
-  };
-  whatsappApi?: {
-    controlId?: string;
-    host?: string;
-    instanceKey?: string;
-    token?: string;
-    webhook?: string;
-    isConnected?: boolean;
-    lastConnection?: Date;
-    qrCode?: string;
-  };
-  isActive: boolean;
-  createdAt: string;
-}
-
-// Interface simplificada para Store
-interface SimpleStore extends Partial<Store> {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  logo_url?: string;
-  is_active?: boolean;
-  created_at?: string;
-  
-  // Campos do banco de dados
-  contact_phone?: string;
-  contact_email?: string;
-  address_street?: string;
-  address_city?: string;
-  address_state?: string;
-  address_zip_code?: string;
-  images_logo?: string;
-}
+import type { SimpleStore } from '../types/store';
 
 // Schema para edição de loja
 const editStoreSchema = yup.object({
