@@ -140,13 +140,20 @@ export default function StoreManagement() {
 
     // Manager só pode editar sua própria loja
     if (user.role === 'manager') {
-      const hasPermission = !!user.store && user.store.id === store.id;
+      const userStoreId = user.store?.id;
+      const storeId = store.id;
+      const hasPermission = user.store && userStoreId === storeId;
+      
       console.log('Verificando permissão para manager:', {
-        userStoreId: user.store?.id,
-        storeId: store.id,
+        userStoreId,
+        storeId,
         hasPermission,
-        userStore: user.store
+        userStore: user.store,
+        storeFromList: store,
+        typesMatch: typeof userStoreId === typeof storeId,
+        valuesMatch: userStoreId == storeId
       });
+      
       return hasPermission;
     }
 
