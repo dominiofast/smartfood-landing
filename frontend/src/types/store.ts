@@ -48,6 +48,9 @@ export interface LegacyStore {
   contact_phone?: string;
   contact_email?: string;
   address_street?: string;
+  address_number?: string;
+  address_complement?: string;
+  address_neighborhood?: string;
   address_city?: string;
   address_state?: string;
   address_zip_code?: string;

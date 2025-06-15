@@ -111,6 +111,15 @@ export default function StoreManagement() {
 
   // Verificar se o usuário pode editar a loja
   const canEditStore = (store: SimpleStore): boolean => {
+    // Log inicial para debug
+    console.log('Verificando permissões de edição:', {
+      userExists: !!user,
+      userRole: user?.role,
+      storeExists: !!store,
+      storeId: store?.id,
+      storeName: store?.name
+    });
+
     // Se não há usuário ou store, não pode editar
     if (!user || !store) {
       console.log('Sem permissão: usuário ou loja não encontrados', { user, store });
@@ -119,7 +128,11 @@ export default function StoreManagement() {
 
     // Superadmin pode editar qualquer loja
     if (user.role === 'superadmin') {
-      console.log('Permissão concedida: usuário é superadmin');
+      console.log('Permissão concedida: usuário é superadmin', {
+        userId: user.id,
+        userRole: user.role,
+        storeId: store.id
+      });
       return true;
     }
 
@@ -169,7 +182,12 @@ export default function StoreManagement() {
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
       const endpoint = (isNetlifyDev || isProduction) ? '/.netlify/functions/stores-crud' : '/api/stores';
       
-      console.log('Carregando lojas do endpoint:', endpoint);
+      console.log('Carregando lojas do endpoint:', endpoint, {
+        isNetlifyDev,
+        isProduction,
+        port: window.location.port,
+        hostname: window.location.hostname
+      });
       
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -180,17 +198,29 @@ export default function StoreManagement() {
       });
 
       if (!response.ok) {
+        console.error('Erro na resposta HTTP:', {
+          status: response.status,
+          statusText: response.statusText
+        });
         throw new Error(`Erro HTTP: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Dados recebidos:', data);
+      console.log('Dados recebidos das lojas:', {
+        success: data.success,
+        storesCount: data.stores?.length,
+        stores: data.stores
+      });
       
       if (data.success && Array.isArray(data.stores)) {
         setStores(data.stores);
         setFilteredStores(data.stores);
+        console.log('Lojas carregadas com sucesso:', {
+          totalStores: data.stores.length,
+          firstStore: data.stores[0]
+        });
       } else {
-        // Se não há lojas, inicializar com array vazio
+        console.log('Nenhuma loja encontrada ou formato inválido:', data);
         setStores([]);
         setFilteredStores([]);
       }
@@ -253,29 +283,107 @@ export default function StoreManagement() {
     console.log('Iniciando edição da loja:', {
       storeId: store.id,
       storeName: store.name,
-      currentUser: user
+      currentUser: user,
+      storeData: store
     });
 
+    // Extrair dados do endereço do formato string, se necessário
+    let addressData = {
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    };
+
+    try {
+      // Se o endereço está em formato JSON string, fazer o parse
+      if (store.address && typeof store.address === 'string' && store.address.startsWith('{')) {
+        const parsedAddress = JSON.parse(store.address);
+        addressData = {
+          street: parsedAddress.street || '',
+          number: parsedAddress.number || '',
+          complement: parsedAddress.complement || '',
+          neighborhood: parsedAddress.neighborhood || '',
+          city: parsedAddress.city || '',
+          state: parsedAddress.state || '',
+          zipCode: parsedAddress.zipCode || ''
+        };
+        console.log('Endereço parseado com sucesso:', addressData);
+      } else {
+        // Usar campos individuais do endereço
+        addressData = {
+          street: store.address_street || store.address || '',
+          number: store.address_number || '',
+          complement: store.address_complement || '',
+          neighborhood: store.address_neighborhood || '',
+          city: store.address_city || store.city || '',
+          state: store.address_state || store.state || '',
+          zipCode: store.address_zip_code || store.zip_code || ''
+        };
+        console.log('Usando campos individuais do endereço:', addressData);
+      }
+    } catch (error) {
+      console.error('Erro ao processar endereço:', error);
+      // Em caso de erro, usar os campos individuais
+      addressData = {
+        street: store.address_street || store.address || '',
+        number: store.address_number || '',
+        complement: store.address_complement || '',
+        neighborhood: store.address_neighborhood || '',
+        city: store.address_city || store.city || '',
+        state: store.address_state || store.state || '',
+        zipCode: store.address_zip_code || store.zip_code || ''
+      };
+    }
+
     setSelectedStore(store);
+    
+    // Definir valores básicos
     setValueEdit('name', store.name);
     setValueEdit('description', store.description || '');
+    
+    // Definir valores de contato
     setValueEdit('contact.phone', store.contact_phone || store.phone || '');
     setValueEdit('contact.email', store.contact_email || store.email || '');
     setValueEdit('contact.whatsapp', store.contact?.whatsapp || '');
-    setValueEdit('address.street', store.address_street || store.address || '');
-    setValueEdit('address.number', '');
-    setValueEdit('address.complement', '');
-    setValueEdit('address.neighborhood', '');
-    setValueEdit('address.city', store.address_city || store.city || '');
-    setValueEdit('address.state', store.address_state || store.state || '');
-    setValueEdit('address.zipCode', store.address_zip_code || store.zip_code || '');
+    
+    // Definir valores do endereço
+    setValueEdit('address.street', addressData.street);
+    setValueEdit('address.number', addressData.number);
+    setValueEdit('address.complement', addressData.complement);
+    setValueEdit('address.neighborhood', addressData.neighborhood);
+    setValueEdit('address.city', addressData.city);
+    setValueEdit('address.state', addressData.state);
+    setValueEdit('address.zipCode', addressData.zipCode);
+
+    // Configurações do WhatsApp
     setValueEdit('whatsappApi.controlId', store.whatsappApi?.controlId || '');
     setValueEdit('whatsappApi.host', store.whatsappApi?.host || '');
     setValueEdit('whatsappApi.instanceKey', store.whatsappApi?.instanceKey || '');
     setValueEdit('whatsappApi.token', store.whatsappApi?.token || '');
     setValueEdit('whatsappApi.webhook', store.whatsappApi?.webhook || '');
 
-    console.log('Valores definidos no formulário de edição');
+    console.log('Valores definidos no formulário de edição:', {
+      name: store.name,
+      description: store.description,
+      address: addressData,
+      contact: {
+        phone: store.contact_phone || store.phone,
+        email: store.contact_email || store.email,
+        whatsapp: store.contact?.whatsapp
+      },
+      whatsappApi: {
+        controlId: store.whatsappApi?.controlId,
+        host: store.whatsappApi?.host,
+        instanceKey: store.whatsappApi?.instanceKey,
+        token: store.whatsappApi?.token,
+        webhook: store.whatsappApi?.webhook
+      }
+    });
+    
     setIsEditModalOpen(true);
   };
 
@@ -284,7 +392,10 @@ export default function StoreManagement() {
     if (!selectedStore) return;
     
     try {
-      console.log('Atualizando loja:', selectedStore.id, data);
+      console.log('Atualizando loja:', {
+        storeId: selectedStore.id,
+        formData: data
+      });
       
       const isNetlifyDev = window.location.port === '8888';
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
@@ -292,24 +403,53 @@ export default function StoreManagement() {
         ? `/.netlify/functions/stores-crud/${selectedStore.id}` 
         : `/api/stores/${selectedStore.id}`;
       
+      // Preparar dados para envio
+      const updateData = {
+        ...data,
+        id: selectedStore.id,
+        // Manter campos legados para compatibilidade
+        phone: data.contact.phone,
+        email: data.contact.email,
+        address: `${data.address.street}, ${data.address.number || 'S/N'}${data.address.complement ? ` - ${data.address.complement}` : ''}, ${data.address.neighborhood}`,
+        city: data.address.city,
+        state: data.address.state,
+        zip_code: data.address.zipCode,
+        // Campos novos
+        contact_phone: data.contact.phone,
+        contact_email: data.contact.email,
+        address_street: data.address.street,
+        address_number: data.address.number,
+        address_complement: data.address.complement,
+        address_neighborhood: data.address.neighborhood,
+        address_city: data.address.city,
+        address_state: data.address.state,
+        address_zip_code: data.address.zipCode
+      };
+
+      console.log('Dados preparados para envio:', updateData);
+      
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         },
-        body: JSON.stringify({
-          ...data,
-          id: selectedStore.id
-        })
+        body: JSON.stringify(updateData)
       });
 
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || result.message || 'Erro ao atualizar loja');
+        const errorData = await response.json();
+        console.error('Erro na resposta do servidor:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        throw new Error(errorData.error || errorData.message || 'Erro ao atualizar loja');
       }
 
+      const result = await response.json();
+      console.log('Resposta do servidor:', result);
+      
       toast.success('Loja atualizada com sucesso!');
       setIsEditModalOpen(false);
       resetEdit();
