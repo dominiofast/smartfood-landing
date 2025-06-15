@@ -1,15 +1,135 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+
+interface Message {
+  _id: string;
+  type: string;
+  content: string;
+  from: string;
+  to: string;
+  timestamp: string;
+  direction: 'inbound' | 'outbound';
+  status: string;
+}
 
 export default function WhatsappConnect() {
+  const { user } = useAuth();
   const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('Olá, gostaria de falar com a loja!');
+  const [loading, setLoading] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [selectedPhone, setSelectedPhone] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const whatsappLink = phone
     ? `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
     : '';
 
+  // Carregar mensagens
+  const loadMessages = async () => {
+    try {
+      const response = await axios.get(`/api/whatsapp/messages/${user?.store?.id}`, {
+        params: {
+          page,
+          phone: selectedPhone
+        }
+      });
+
+      setMessages(response.data.data.messages);
+      setTotalPages(response.data.data.totalPages);
+    } catch (error) {
+      console.error('Erro ao carregar mensagens:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.store?.id) {
+      loadMessages();
+    }
+  }, [user?.store?.id, page, selectedPhone]);
+
+  // Função para conectar o WhatsApp
+  const connectWhatsapp = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.post('/api/whatsapp/connect', {
+        storeId: user?.store?.id
+      });
+      
+      if (response.data.qrCode) {
+        setQrCode(response.data.qrCode);
+        // Iniciar polling para verificar status da conexão
+        checkConnectionStatus();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao conectar WhatsApp');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para desconectar o WhatsApp
+  const disconnectWhatsapp = async () => {
+    try {
+      setLoading(true);
+      await axios.post('/api/whatsapp/disconnect', {
+        storeId: user?.store?.id
+      });
+      setQrCode(null);
+      toast.success('WhatsApp desconectado com sucesso!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao desconectar WhatsApp');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Função para verificar status da conexão
+  const checkConnectionStatus = async () => {
+    try {
+      const response = await axios.get(`/api/whatsapp/status/${user?.store?.id}`);
+      if (response.data.connected) {
+        setQrCode(null);
+        toast.success('WhatsApp conectado com sucesso!');
+      } else {
+        // Continuar verificando a cada 5 segundos
+        setTimeout(checkConnectionStatus, 5000);
+      }
+    } catch (error) {
+      console.error('Erro ao verificar status:', error);
+    }
+  };
+
+  // Função para enviar mensagem
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPhone || !newMessage) return;
+
+    try {
+      setSendingMessage(true);
+      await axios.post(`/api/whatsapp/messages/${user?.store?.id}`, {
+        phone: selectedPhone,
+        message: newMessage
+      });
+
+      setNewMessage('');
+      loadMessages(); // Recarregar mensagens
+      toast.success('Mensagem enviada com sucesso!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Erro ao enviar mensagem');
+    } finally {
+      setSendingMessage(false);
+    }
+  };
+
   return (
-    <div className="max-w-xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-4 text-green-600">
         <svg
           viewBox="0 0 448 512"
@@ -20,6 +140,8 @@ export default function WhatsappConnect() {
         </svg>
         Conectar WhatsApp
       </h1>
+
+      {/* Integração Simples */}
       <div className="bg-white rounded-xl shadow p-6 mb-8 border">
         <h2 className="text-xl font-semibold mb-2">Integração Simples (Link/Botão)</h2>
         <p className="text-gray-600 mb-4">Permite que o cliente abra uma conversa no WhatsApp Web ou app com sua loja.</p>
@@ -62,20 +184,168 @@ export default function WhatsappConnect() {
           Abrir WhatsApp
         </a>
       </div>
+
+      {/* Integração Avançada */}
       <div className="bg-white rounded-xl shadow p-6 border">
-        <h2 className="text-xl font-semibold mb-2 text-yellow-600">Integração Avançada (Bot WhatsApp)</h2>
-        <p className="text-gray-700 mb-2">
-          Para automação, respostas automáticas e integração real com mensagens, é necessário rodar um <b>bot de WhatsApp</b> usando a biblioteca <code>whatsapp-web.js</code> no backend.<br />
-          <span className="text-sm text-gray-500">(O servidor precisa ficar online 24h para o bot funcionar.)</span>
+        <h2 className="text-xl font-semibold mb-2 text-green-600">Integração Avançada (Bot WhatsApp)</h2>
+        <p className="text-gray-700 mb-4">
+          Conecte seu WhatsApp para habilitar recursos avançados como respostas automáticas, automação de mensagens e integração com sistemas.
         </p>
-        <ul className="list-disc ml-6 text-gray-600 mb-2">
-          <li>Permite automação de mensagens, respostas automáticas, integração com sistemas.</li>
-          <li>Necessita configuração e autenticação via QR Code.</li>
-          <li>Não é uma API oficial do WhatsApp.</li>
-        </ul>
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-          <b>Próximos passos:</b> Solicite ao desenvolvedor a configuração do bot no backend.<br />
-          Após configurado, a comunicação entre o site e o bot pode ser feita via API interna.
+
+        {user?.store?.whatsappApi?.isConnected ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-green-600">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+              <span className="font-medium">WhatsApp Conectado</span>
+            </div>
+            <button
+              onClick={disconnectWhatsapp}
+              disabled={loading}
+              className="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Desconectando...' : 'Desconectar WhatsApp'}
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {qrCode ? (
+              <div className="flex flex-col items-center gap-4">
+                <img
+                  src={qrCode}
+                  alt="QR Code para conexão do WhatsApp"
+                  className="w-64 h-64"
+                />
+                <p className="text-sm text-gray-600">
+                  Escaneie o QR Code com seu WhatsApp para conectar
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={connectWhatsapp}
+                disabled={loading || !user?.store?.whatsappApi?.instanceKey}
+                className="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Conectando...' : 'Conectar WhatsApp'}
+              </button>
+            )}
+            
+            {!user?.store?.whatsappApi?.instanceKey && (
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <p className="text-sm text-yellow-800">
+                  <b>Configuração necessária:</b> Solicite ao administrador para configurar as credenciais da API do WhatsApp nas configurações da loja.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lista de Mensagens */}
+        {user?.store?.whatsappApi?.isConnected && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Mensagens</h3>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={selectedPhone}
+                  onChange={e => setSelectedPhone(e.target.value)}
+                  placeholder="Filtrar por número"
+                  className="border rounded-lg px-3 py-1 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <div className="max-h-96 overflow-y-auto">
+                {messages.map(msg => (
+                  <div
+                    key={msg._id}
+                    className={`p-3 border-b ${
+                      msg.direction === 'inbound' ? 'bg-gray-50' : 'bg-green-50'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {msg.direction === 'inbound' ? msg.from : msg.to}
+                        </p>
+                        <p className="text-gray-600">{msg.content}</p>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(msg.timestamp).toLocaleString()}
+                      </div>
+                    </div>
+                    {msg.direction === 'outbound' && (
+                      <div className="mt-1 text-xs text-gray-500">
+                        Status: {msg.status}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Paginação */}
+              <div className="flex items-center justify-between p-3 border-t bg-gray-50">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-1 text-sm bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+                <span className="text-sm text-gray-600">
+                  Página {page} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-1 text-sm bg-white border rounded hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+
+            {/* Formulário de Envio */}
+            <form onSubmit={handleSendMessage} className="mt-4">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={selectedPhone}
+                  onChange={e => setSelectedPhone(e.target.value)}
+                  placeholder="Número do WhatsApp"
+                  required
+                  className="flex-1 border rounded-lg px-3 py-2"
+                />
+                <input
+                  type="text"
+                  value={newMessage}
+                  onChange={e => setNewMessage(e.target.value)}
+                  placeholder="Digite sua mensagem"
+                  required
+                  className="flex-2 border rounded-lg px-3 py-2"
+                />
+                <button
+                  type="submit"
+                  disabled={sendingMessage}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {sendingMessage ? 'Enviando...' : 'Enviar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        <div className="mt-6 space-y-2">
+          <h3 className="font-medium text-gray-900">Recursos disponíveis:</h3>
+          <ul className="list-disc ml-6 text-gray-600 space-y-1">
+            <li>Respostas automáticas e chatbot</li>
+            <li>Automação de mensagens e disparos</li>
+            <li>Integração com sistemas</li>
+            <li>Múltiplos atendentes</li>
+            <li>Relatórios e métricas</li>
+          </ul>
         </div>
       </div>
     </div>
