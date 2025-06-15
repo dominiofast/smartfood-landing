@@ -21,6 +21,7 @@ import {
   ChevronRightIcon,
   DocumentTextIcon,
   UserGroupIcon,
+  ComputerDesktopIcon,
 } from '@heroicons/react/24/outline';
 
 const Layout: React.FC = () => {
@@ -53,8 +54,10 @@ const Layout: React.FC = () => {
 
     return [
       { name: 'Pedidos', href: '/manager/orders', icon: ShoppingBagIcon },
+      { name: 'PDV', href: '/manager/pdv', icon: ComputerDesktopIcon },
       { name: 'Gestor de Cardápio', href: '/manager/menu', icon: ClipboardDocumentListIcon },
       { name: 'Minha Loja', href: '/manager/store', icon: BuildingStorefrontIcon },
+      { name: 'Meus Clientes', href: '/manager/customers', icon: UserGroupIcon },
       { name: 'Equipe', href: '/manager/users', icon: UsersIcon },
       { name: 'Assistente IA', href: '/manager/ai-assistant', icon: SparklesIcon },
       { name: 'Relatórios', href: '/manager/reports', icon: ChartBarIcon },
@@ -150,21 +153,6 @@ const Layout: React.FC = () => {
                       </div>
                     )}
                   </div>
-
-                  {/* Meus Clientes - apenas para managers */}
-                  {user?.role === 'manager' && (
-                    <Link
-                      to="/manager/customers"
-                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        location.pathname === '/manager/customers'
-                          ? 'bg-primary-100 text-primary-900'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      <UserGroupIcon className="w-5 h-5 mr-3" />
-                      Meus Clientes
-                    </Link>
-                  )}
                 </nav>
               </div>
             </motion.div>
