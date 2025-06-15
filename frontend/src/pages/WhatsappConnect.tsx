@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FaWhatsapp } from 'react-icons/fa';
+import type { IconType } from 'react-icons';
 
 export default function WhatsappConnect() {
   const [phone, setPhone] = useState('');
@@ -9,10 +10,12 @@ export default function WhatsappConnect() {
     ? `https://wa.me/${phone.replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
     : '';
 
+  const WhatsappIcon: IconType = FaWhatsapp;
+
   return (
     <div className="max-w-xl mx-auto p-6">
       <h1 className="text-3xl font-bold flex items-center gap-2 mb-4 text-green-600">
-        <FaWhatsapp className="inline-block" /> Conectar WhatsApp
+        <WhatsappIcon className="inline-block" /> Conectar WhatsApp
       </h1>
       <div className="bg-white rounded-xl shadow p-6 mb-8 border">
         <h2 className="text-xl font-semibold mb-2">Integração Simples (Link/Botão)</h2>
@@ -44,9 +47,9 @@ export default function WhatsappConnect() {
           target="_blank"
           rel="noopener noreferrer"
           className={`inline-flex items-center gap-2 px-6 py-2 rounded-lg text-white font-semibold shadow transition-colors ${phone ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}`}
-          disabled={!phone}
+          onClick={(e) => !phone && e.preventDefault()}
         >
-          <FaWhatsapp className="w-5 h-5" /> Abrir WhatsApp
+          <WhatsappIcon className="w-5 h-5" /> Abrir WhatsApp
         </a>
       </div>
       <div className="bg-white rounded-xl shadow p-6 border">
