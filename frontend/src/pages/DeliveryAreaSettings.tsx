@@ -11,7 +11,7 @@ export default function DeliveryAreaSettings() {
   const [radius, setRadius] = useState(DEFAULT_RADIUS); // km
   const [center, setCenter] = useState(DEFAULT_CENTER);
   const [loading, setLoading] = useState(false);
-  const mapRef = useRef(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
 
   const { isLoaded } = useJsApiLoader({
     googleMapsApiKey: GOOGLE_MAPS_API_KEY,
