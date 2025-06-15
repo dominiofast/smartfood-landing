@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { 
@@ -13,11 +13,76 @@ import {
   UserPlusIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
+import WhatsappApiSettings from '../components/WhatsappApiSettings';
+import EditStoreForm from '../components/EditStoreForm';
+
+// Interface para Store
+interface Store {
+  id: string;
+  name: string;
+  description?: string;
+  contact: {
+    phone: string;
+    email: string;
+    whatsapp?: string;
+  };
+  address: {
+    street: string;
+    number?: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+  };
+  whatsappApi?: {
+    controlId?: string;
+    host?: string;
+    instanceKey?: string;
+    token?: string;
+    webhook?: string;
+    isConnected?: boolean;
+    lastConnection?: Date;
+    qrCode?: string;
+  };
+  isActive: boolean;
+  createdAt: string;
+}
+
+// Schema para edição de loja
+const editStoreSchema = yup.object({
+  name: yup.string().required('Nome da loja é obrigatório'),
+  description: yup.string(),
+  contact: yup.object({
+    phone: yup.string().required('Telefone é obrigatório'),
+    email: yup.string().email('Email inválido').required('Email é obrigatório'),
+    whatsapp: yup.string()
+  }),
+  address: yup.object({
+    street: yup.string().required('Endereço é obrigatório'),
+    number: yup.string(),
+    complement: yup.string(),
+    neighborhood: yup.string().required('Bairro é obrigatório'),
+    city: yup.string().required('Cidade é obrigatória'),
+    state: yup.string().required('Estado é obrigatório'),
+    zipCode: yup.string().required('CEP é obrigatório')
+  }),
+  whatsappApi: yup.object({
+    controlId: yup.string(),
+    host: yup.string(),
+    instanceKey: yup.string(),
+    token: yup.string(),
+    webhook: yup.string()
+  })
+});
+
+type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
 
 // Interface simplificada para Store
 interface SimpleStore {
   id: string;
   name: string;
+  description?: string;
   phone?: string;
   email?: string;
   address?: string;
@@ -36,6 +101,23 @@ interface SimpleStore {
   address_state?: string;
   address_zip_code?: string;
   images_logo?: string;
+
+  // Campos opcionais da Store completa
+  contact?: {
+    phone: string;
+    email: string;
+    whatsapp?: string;
+  };
+  whatsappApi?: {
+    controlId?: string;
+    host?: string;
+    instanceKey?: string;
+    token?: string;
+    webhook?: string;
+    isConnected?: boolean;
+    lastConnection?: Date;
+    qrCode?: string;
+  };
 }
 
 // Schema para criação de loja
@@ -46,20 +128,6 @@ const createStoreSchema = yup.object({
 });
 
 type CreateStoreFormData = yup.InferType<typeof createStoreSchema>;
-
-// Schema para edição de loja
-const editStoreSchema = yup.object({
-  name: yup.string().required('Nome da loja é obrigatório'),
-  phone: yup.string().required('Telefone é obrigatório'),
-  email: yup.string().email('Email inválido').required('Email é obrigatório'),
-  address: yup.string(),
-  city: yup.string(),
-  state: yup.string(),
-  zip_code: yup.string(),
-  logo_url: yup.string().url('URL inválida').nullable(),
-});
-
-type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
 
 // Schema para criar manager
 const createManagerSchema = yup.object({
@@ -96,11 +164,10 @@ export default function StoreManagement() {
 
   // Form para editar loja
   const {
-    register: registerEdit,
     handleSubmit: handleSubmitEdit,
     reset: resetEdit,
     setValue: setValueEdit,
-    formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
+    formState: { isSubmitting: isSubmittingEdit },
   } = useForm<EditStoreFormData>({
     resolver: yupResolver(editStoreSchema),
   });
@@ -241,13 +308,22 @@ export default function StoreManagement() {
   const handleEdit = (store: SimpleStore) => {
     setSelectedStore(store);
     setValueEdit('name', store.name);
-    setValueEdit('phone', store.phone || '');
-    setValueEdit('email', store.email || '');
-    setValueEdit('address', store.address || '');
-    setValueEdit('city', store.city || '');
-    setValueEdit('state', store.state || 'SP');
-    setValueEdit('zip_code', store.zip_code || '');
-    setValueEdit('logo_url', store.logo_url || '');
+    setValueEdit('description', store.description || '');
+    setValueEdit('contact.phone', store.contact_phone || store.phone || '');
+    setValueEdit('contact.email', store.contact_email || store.email || '');
+    setValueEdit('contact.whatsapp', store.contact?.whatsapp || '');
+    setValueEdit('address.street', store.address_street || store.address || '');
+    setValueEdit('address.number', '');
+    setValueEdit('address.complement', '');
+    setValueEdit('address.neighborhood', '');
+    setValueEdit('address.city', store.address_city || store.city || '');
+    setValueEdit('address.state', store.address_state || store.state || '');
+    setValueEdit('address.zipCode', store.address_zip_code || store.zip_code || '');
+    setValueEdit('whatsappApi.controlId', store.whatsappApi?.controlId || '');
+    setValueEdit('whatsappApi.host', store.whatsappApi?.host || '');
+    setValueEdit('whatsappApi.instanceKey', store.whatsappApi?.instanceKey || '');
+    setValueEdit('whatsappApi.token', store.whatsappApi?.token || '');
+    setValueEdit('whatsappApi.webhook', store.whatsappApi?.webhook || '');
     setIsEditModalOpen(true);
   };
 
@@ -620,207 +696,16 @@ export default function StoreManagement() {
 
       {/* Modal para editar loja */}
       {isEditModalOpen && selectedStore && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Gerenciar Loja
-              </h3>
-              <button
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  resetEdit();
-                  setSelectedStore(null);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="px-6 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Informações Básicas */}
-                <div className="md:col-span-2">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Informações Básicas</h4>
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome da Loja *
-                  </label>
-                  <input
-                    {...registerEdit('name')}
-                    id="edit-name"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.name && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.name.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone *
-                  </label>
-                  <input
-                    {...registerEdit('phone')}
-                    id="edit-phone"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.phone.message}</p>
-                  )}
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    {...registerEdit('email')}
-                    id="edit-email"
-                    type="email"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.email && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.email.message}</p>
-                  )}
-                </div>
-                
-                {/* Endereço */}
-                <div className="md:col-span-2 mt-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Endereço</h4>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="edit-address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Endereço
-                  </label>
-                  <input
-                    {...registerEdit('address')}
-                    id="edit-address"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Rua, número, complemento"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-city" className="block text-sm font-medium text-gray-700 mb-1">
-                    Cidade
-                  </label>
-                  <input
-                    {...registerEdit('city')}
-                    id="edit-city"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-state" className="block text-sm font-medium text-gray-700 mb-1">
-                    Estado
-                  </label>
-                  <select
-                    {...registerEdit('state')}
-                    id="edit-state"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="AC">AC</option>
-                    <option value="AL">AL</option>
-                    <option value="AP">AP</option>
-                    <option value="AM">AM</option>
-                    <option value="BA">BA</option>
-                    <option value="CE">CE</option>
-                    <option value="DF">DF</option>
-                    <option value="ES">ES</option>
-                    <option value="GO">GO</option>
-                    <option value="MA">MA</option>
-                    <option value="MT">MT</option>
-                    <option value="MS">MS</option>
-                    <option value="MG">MG</option>
-                    <option value="PA">PA</option>
-                    <option value="PB">PB</option>
-                    <option value="PR">PR</option>
-                    <option value="PE">PE</option>
-                    <option value="PI">PI</option>
-                    <option value="RJ">RJ</option>
-                    <option value="RN">RN</option>
-                    <option value="RS">RS</option>
-                    <option value="RO">RO</option>
-                    <option value="RR">RR</option>
-                    <option value="SC">SC</option>
-                    <option value="SP">SP</option>
-                    <option value="SE">SE</option>
-                    <option value="TO">TO</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-zip" className="block text-sm font-medium text-gray-700 mb-1">
-                    CEP
-                  </label>
-                  <input
-                    {...registerEdit('zip_code')}
-                    id="edit-zip"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="00000-000"
-                  />
-                </div>
-                
-                {/* Logo */}
-                <div className="md:col-span-2 mt-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Imagens</h4>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="edit-logo" className="block text-sm font-medium text-gray-700 mb-1">
-                    URL do Logo
-                  </label>
-                  <input
-                    {...registerEdit('logo_url')}
-                    id="edit-logo"
-                    type="url"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="https://exemplo.com/logo.png"
-                  />
-                  {errorsEdit.logo_url && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.logo_url.message}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    resetEdit();
-                    setSelectedStore(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingEdit}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {isSubmittingEdit ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
+        <EditStoreForm
+          store={selectedStore}
+          onSubmit={onSubmitEdit}
+          onCancel={() => {
+            setIsEditModalOpen(false);
+            resetEdit();
+            setSelectedStore(null);
+          }}
+          isSubmitting={isSubmittingEdit}
+        />
       )}
 
       {/* Modal para criar manager */}
