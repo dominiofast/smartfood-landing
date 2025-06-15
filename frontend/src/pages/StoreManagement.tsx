@@ -315,6 +315,7 @@ export default function StoreManagement() {
     try {
       // Se o endereço está em formato JSON string, fazer o parse
       if (store.address && typeof store.address === 'string' && store.address.startsWith('{')) {
+        console.log('Tentando parsear endereço JSON:', store.address);
         const parsedAddress = JSON.parse(store.address);
         addressData = {
           street: parsedAddress.street || '',
@@ -340,17 +341,36 @@ export default function StoreManagement() {
         console.log('Usando campos individuais do endereço:', addressData);
       }
     } catch (error) {
-      console.error('Erro ao processar endereço:', error);
-      // Em caso de erro, usar os campos individuais
-      addressData = {
-        street: store.address_street || store.address || '',
-        number: store.address_number || '',
-        complement: store.address_complement || '',
-        neighborhood: store.address_neighborhood || '',
-        city: store.address_city || store.city || '',
-        state: store.address_state || store.state || '',
-        zipCode: store.address_zip_code || store.zip_code || ''
-      };
+      console.error('Erro ao processar endereço:', error, {
+        address: store.address,
+        addressType: typeof store.address
+      });
+      // Em caso de erro, tentar extrair informações do endereço string
+      if (store.address && typeof store.address === 'string') {
+        const addressParts = store.address.split(',').map(part => part.trim());
+        addressData = {
+          street: addressParts[0] || '',
+          number: addressParts[1] || '',
+          complement: addressParts[2] || '',
+          neighborhood: addressParts[3] || '',
+          city: store.city || addressParts[4] || '',
+          state: store.state || addressParts[5] || '',
+          zipCode: store.zip_code || ''
+        };
+        console.log('Endereço extraído de string:', addressData);
+      } else {
+        // Usar campos individuais como fallback
+        addressData = {
+          street: store.address_street || store.address || '',
+          number: store.address_number || '',
+          complement: store.address_complement || '',
+          neighborhood: store.address_neighborhood || '',
+          city: store.address_city || store.city || '',
+          state: store.address_state || store.state || '',
+          zipCode: store.address_zip_code || store.zip_code || ''
+        };
+        console.log('Usando campos individuais como fallback:', addressData);
+      }
     }
 
     setSelectedStore(store);
@@ -389,13 +409,7 @@ export default function StoreManagement() {
         email: store.contact_email || store.email,
         whatsapp: store.contact?.whatsapp
       },
-      whatsappApi: {
-        controlId: store.whatsappApi?.controlId,
-        host: store.whatsappApi?.host,
-        instanceKey: store.whatsappApi?.instanceKey,
-        token: store.whatsappApi?.token,
-        webhook: store.whatsappApi?.webhook
-      }
+      whatsappApi: store.whatsappApi
     });
     
     setIsEditModalOpen(true);
@@ -640,11 +654,41 @@ export default function StoreManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{store.name}</div>
-                    {(store.address_street || store.address) && (
-                      <div className="text-sm text-gray-500">
-                        {store.address_street || store.address}
-                      </div>
-                    )}
+                    {(() => {
+                      try {
+                        // Tentar parsear o endereço se estiver em formato JSON
+                        if (store.address && typeof store.address === 'string' && store.address.startsWith('{')) {
+                          const addressData = JSON.parse(store.address);
+                          return (
+                            <div className="text-sm text-gray-500">
+                              {`${addressData.street}${addressData.number ? `, ${addressData.number}` : ''}`}
+                              {addressData.neighborhood ? ` - ${addressData.neighborhood}` : ''}
+                              {addressData.city ? `, ${addressData.city}` : ''}
+                              {addressData.state ? `-${addressData.state}` : ''}
+                            </div>
+                          );
+                        }
+                        
+                        // Se não for JSON, usar os campos individuais
+                        if (store.address_street || store.address) {
+                          return (
+                            <div className="text-sm text-gray-500">
+                              {store.address_street || store.address}
+                              {store.address_city ? `, ${store.address_city}` : ''}
+                              {store.address_state ? `-${store.address_state}` : ''}
+                            </div>
+                          );
+                        }
+                      } catch (error) {
+                        console.error('Erro ao processar endereço:', error);
+                        // Em caso de erro, mostrar o endereço como está
+                        return store.address && (
+                          <div className="text-sm text-gray-500">
+                            {store.address}
+                          </div>
+                        );
+                      }
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {store.contact_phone || store.phone || '-'}
