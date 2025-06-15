@@ -96,7 +96,7 @@ export default function DeliveryAreaSettings() {
               zoom={13}
               mapContainerStyle={{ width: '100%', height: '100%' }}
               options={{ disableDefaultUI: true }}
-              onLoad={map => (mapRef.current = map)}
+              onLoad={map => { mapRef.current = map; }}
             >
               <Marker position={center} />
               <Circle
