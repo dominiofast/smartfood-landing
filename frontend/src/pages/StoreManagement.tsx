@@ -326,11 +326,11 @@ export default function StoreManagement() {
 
     // Garantir que temos dados da WhatsApp API
     const whatsappApiData = {
-      controlId: store.whatsappApi?.controlId || '',
-      host: store.whatsappApi?.host || '',
-      instanceKey: store.whatsappApi?.instanceKey || '',
-      token: store.whatsappApi?.token || '',
-      webhook: store.whatsappApi?.webhook || ''
+      controlId: store.whatsappApi?.controlId || undefined,
+      host: store.whatsappApi?.host || undefined,
+      instanceKey: store.whatsappApi?.instanceKey || undefined,
+      token: store.whatsappApi?.token || undefined,
+      webhook: store.whatsappApi?.webhook || undefined
     };
 
     console.log('Dados da WhatsApp API:', whatsappApiData);
@@ -475,15 +475,28 @@ export default function StoreManagement() {
         address_city: data.address.city,
         address_state: data.address.state,
         address_zip_code: data.address.zipCode,
-        // WhatsApp API - garantir que os campos vazios sejam null e não string vazia
+        // WhatsApp API - garantir que os campos vazios sejam undefined
         whatsappApi: {
-          controlId: data.whatsappApi.controlId || null,
-          host: data.whatsappApi.host || null,
-          instanceKey: data.whatsappApi.instanceKey || null,
-          token: data.whatsappApi.token || null,
-          webhook: data.whatsappApi.webhook || null
+          controlId: data.whatsappApi.controlId?.trim() || undefined,
+          host: data.whatsappApi.host?.trim() || undefined,
+          instanceKey: data.whatsappApi.instanceKey?.trim() || undefined,
+          token: data.whatsappApi.token?.trim() || undefined,
+          webhook: data.whatsappApi.webhook?.trim() || undefined
         }
       };
+
+      // Preservar dados existentes do WhatsApp API se nenhum campo foi alterado
+      if (selectedStore.whatsappApi && 
+          Object.values(updateData.whatsappApi).every(value => value === undefined)) {
+        console.log('Mantendo dados existentes do WhatsApp API:', selectedStore.whatsappApi);
+        updateData.whatsappApi = {
+          controlId: selectedStore.whatsappApi.controlId || undefined,
+          host: selectedStore.whatsappApi.host || undefined,
+          instanceKey: selectedStore.whatsappApi.instanceKey || undefined,
+          token: selectedStore.whatsappApi.token || undefined,
+          webhook: selectedStore.whatsappApi.webhook || undefined
+        };
+      }
 
       console.log('Dados preparados para envio:', updateData);
       
