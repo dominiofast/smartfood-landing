@@ -1,15 +1,15 @@
 import axios, { AxiosInstance } from 'axios';
 import { User, LoginCredentials, AuthResponse } from '../types';
 
-// Define a URL base da API usando a variável de ambiente do Vite ou o domínio do Netlify
-const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions'
-  : 'http://localhost:8888/.netlify/functions';
+// Define a URL base da API usando a variável de ambiente do Vite
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/.netlify/functions';
 
 class AuthService {
   private api: AxiosInstance;
 
   constructor() {
+    console.log('API Base URL:', API_BASE_URL);
+    
     this.api = axios.create({
       baseURL: API_BASE_URL,
       timeout: 10000, // 10 segundos
@@ -98,7 +98,7 @@ class AuthService {
     try {
       console.log('Tentando fazer login com:', { email: credentials.email });
       
-      const { data } = await this.api.post<AuthResponse>('/.netlify/functions/auth/login', credentials);
+      const { data } = await this.api.post<AuthResponse>('/auth/login', credentials);
       
       if (data.token) {
         localStorage.setItem('token', data.token);

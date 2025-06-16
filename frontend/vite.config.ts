@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   // Em desenvolvimento, usa localhost, em produção usa a URL do Netlify
   const apiUrl = mode === 'production' 
     ? 'https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions'
-    : 'http://localhost:3000';
+    : 'http://localhost:8888/.netlify/functions';
   
   console.log('Mode:', mode);
   console.log('API URL:', apiUrl);
@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react()],
     root: '.',
     base: '/',
+    envDir: '.',
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -31,15 +32,25 @@ export default defineConfig(({ mode }) => {
           target: 'http://localhost:8888',
           changeOrigin: true,
           secure: false,
+          rewrite: (path) => path,
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('proxy error', err);
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log('Sending Request:', req.method, req.url);
+            });
+            proxy.on('proxyRes', (proxyRes, req, _res) => {
+              console.log('Received Response:', proxyRes.statusCode, req.url);
+            });
+          }
         }
       },
-      cors: true,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
-        'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
-        'Access-Control-Allow-Credentials': 'true',
-      },
+      cors: {
+        origin: ['http://localhost:3000', 'http://localhost:8888'],
+        methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+        credentials: true
+      }
     },
     build: {
       outDir: 'build',
@@ -56,9 +67,10 @@ export default defineConfig(({ mode }) => {
     define: {
       'process.env': {
         ...env,
-        VITE_APP_URL: mode === 'production' 
+        VITE_API_URL: JSON.stringify(apiUrl),
+        VITE_APP_URL: JSON.stringify(mode === 'production' 
           ? 'https://peppy-narwhal-64ff9e.netlify.app'
-          : 'http://localhost:3000'
+          : 'http://localhost:3000')
       },
     },
   };

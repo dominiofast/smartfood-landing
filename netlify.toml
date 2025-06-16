@@ -4,16 +4,25 @@
   functions = "functions"
 
 [dev]
-  command = "npm run dev"
+  command = "npm run dev:frontend"
   port = 8888
   targetPort = 3000
   publish = "frontend/build"
   autoLaunch = true
+  framework = "#custom"
 
 [build.environment]
-  NODE_VERSION = "18"
-  NPM_VERSION = "9"
-  VITE_API_URL = "https://api.dominiotech.com.br"
+  NODE_ENV = "production"
+
+[dev.environment]
+  NODE_ENV = "development"
+  DATABASE_URL = "postgresql://neondb_owner:npg_aj6KdeGg4QiO@ep-weathered-dream-acw41z52-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require"
+  JWT_SECRET = "chave_super_secreta_123"
+
+[context.dev.environment]
+  DATABASE_URL = "postgresql://neondb_owner:npg_aj6KdeGg4QiO@ep-weathered-dream-acw41z52-pooler.sa-east-1.aws.neon.tech/neondb?sslmode=require"
+  JWT_SECRET = "chave_super_secreta_123"
+  NODE_ENV = "development"
 
 # API redirects to our single serverless function.
 # Esta regra deve vir antes da regra geral do SPA para ser processada primeiro.
@@ -21,6 +30,7 @@
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
   status = 200
+  force = true
 
 # Regra geral para Single Page Application (SPA).
 # Deve ser a última regra para capturar todas as outras rotas.
@@ -37,7 +47,6 @@
   DATABASE_URL = "postgresql://user:password@host/database"
   JWT_SECRET = "your-secret-key"
   OPENAI_API_KEY = "your-openai-key"
-  NODE_ENV = "production"
 
 [[headers]]
   for = "/*"
@@ -46,4 +55,8 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self' https://peppy-narwhal-64ff9e.netlify.app; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions;" 
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, PUT, DELETE, OPTIONS"
+    Access-Control-Allow-Headers = "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+    Access-Control-Allow-Credentials = "true"
+    Content-Security-Policy = "default-src 'self' http://localhost:3000 http://localhost:8888 https://peppy-narwhal-64ff9e.netlify.app *.sa-east-1.aws.neon.tech; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' http://localhost:8888 http://localhost:3000 https://peppy-narwhal-64ff9e.netlify.app *.sa-east-1.aws.neon.tech;" 
