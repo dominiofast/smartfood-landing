@@ -24,7 +24,9 @@ const generateToken = (userId: string, role: string): string => {
 export const handler: Handler = async (event) => {
   // Habilita CORS
   const headers = {
-    'Access-Control-Allow-Origin': 'https://peppy-narwhal-64ff9e.netlify.app',
+    'Access-Control-Allow-Origin': process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000'
+      : 'https://peppy-narwhal-64ff9e.netlify.app',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Credentials': 'true',
@@ -40,7 +42,7 @@ export const handler: Handler = async (event) => {
   }
 
   // Verifica se é uma requisição POST para /auth/login
-  if (event.path === '/.netlify/functions/auth/login' && event.httpMethod === 'POST') {
+  if (event.path === '/auth/login' && event.httpMethod === 'POST') {
     try {
       const { email, password } = JSON.parse(event.body || '{}');
 
