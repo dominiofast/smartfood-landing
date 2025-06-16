@@ -64,6 +64,27 @@ const storeSchema = new mongoose.Schema({
       ]
     }
   },
+  whatsappApi: {
+    controlId: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    host: String,
+    instanceKey: {
+      type: String,
+      unique: true,
+      sparse: true
+    },
+    token: String,
+    webhook: String,
+    isConnected: {
+      type: Boolean,
+      default: false
+    },
+    lastConnection: Date,
+    qrCode: String
+  },
   businessInfo: {
     cnpj: {
       type: String,

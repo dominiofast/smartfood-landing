@@ -18,6 +18,9 @@ import DigitalMenu from './pages/DigitalMenu';
 import DigitalMenuSettings from './pages/DigitalMenuSettings';
 import Customers from './pages/Customers';
 import PDV from './pages/PDV';
+import AddEmployee from './pages/AddEmployee';
+import DeliveryAreaSettings from './pages/DeliveryAreaSettings';
+import WhatsappConnect from './pages/WhatsappConnect';
 
 // Components
 import ProtectedRoute from './components/ProtectedRoute';
@@ -73,6 +76,7 @@ function App() {
                   <Route path="ai-assistant" element={<AIAssistant />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="settings/digital-menu" element={<DigitalMenuSettings />} />
+                  <Route path="whatsapp" element={<WhatsappConnect />} />
                 </Route>
                 
                 {/* Manager Routes */}
@@ -84,9 +88,12 @@ function App() {
                   <Route path="store" element={<StoreManagement />} />
                   <Route path="customers" element={<Customers />} />
                   <Route path="users" element={<UserManagement />} />
+                  <Route path="users/add" element={<AddEmployee />} />
                   <Route path="ai-assistant" element={<AIAssistant />} />
                   <Route path="reports" element={<Reports />} />
                   <Route path="settings/digital-menu" element={<DigitalMenuSettings />} />
+                  <Route path="settings/delivery-area" element={<DeliveryAreaSettings />} />
+                  <Route path="whatsapp" element={<WhatsappConnect />} />
                 </Route>
               </Route>
             </Route>

@@ -18,6 +18,7 @@ export interface Store {
   description?: string;
   address: Address;
   contact: ContactInfo;
+  whatsappApi?: WhatsappApi;
   businessInfo: BusinessInfo;
   settings: StoreSettings;
   subscription: Subscription;
@@ -48,6 +49,17 @@ export interface ContactInfo {
   phone: string;
   whatsapp?: string;
   email: string;
+}
+
+export interface WhatsappApi {
+  controlId?: string;
+  host?: string;
+  instanceKey?: string;
+  token?: string;
+  webhook?: string;
+  isConnected: boolean;
+  lastConnection?: Date;
+  qrCode?: string;
 }
 
 export interface BusinessInfo {

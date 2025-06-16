@@ -50,13 +50,34 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Função para verificar se o token ainda é válido (90 dias)
   const isTokenValid = (): boolean => {
-    const tokenExpiry = localStorage.getItem('tokenExpiry');
-    if (!tokenExpiry) return false;
-    
-    const expiryDate = new Date(tokenExpiry);
-    const now = new Date();
-    
-    return now < expiryDate;
+    try {
+      const token = localStorage.getItem('token');
+      const tokenExpiry = localStorage.getItem('tokenExpiry');
+      
+      if (!token || !tokenExpiry) {
+        console.log('Token ou data de expiração não encontrados');
+        return false;
+      }
+      
+      const expiryDate = new Date(tokenExpiry);
+      const now = new Date();
+      
+      // Adicionar 5 minutos de margem para evitar problemas de sincronização
+      const isValid = now.getTime() < (expiryDate.getTime() + (5 * 60 * 1000));
+      
+      console.log('Verificação de token:', {
+        tokenExists: !!token,
+        expiryExists: !!tokenExpiry,
+        expiryDate: expiryDate.toISOString(),
+        now: now.toISOString(),
+        isValid
+      });
+      
+      return isValid;
+    } catch (error) {
+      console.error('Erro ao verificar validade do token:', error);
+      return false;
+    }
   };
 
   const loadUser = useCallback(async () => {
@@ -99,6 +120,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             localStorage.removeItem('token');
             localStorage.removeItem('tokenExpiry');
             localStorage.removeItem('user');
+            setUser(null);
           }
         }
       } else {
@@ -107,6 +129,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.removeItem('token');
         localStorage.removeItem('tokenExpiry');
         localStorage.removeItem('user');
+        setUser(null);
       }
     } catch (error: any) {
       console.error('Erro geral ao carregar usuário:', error);
@@ -114,6 +137,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('token');
       localStorage.removeItem('tokenExpiry');
       localStorage.removeItem('user');
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -142,9 +166,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           
           // Verificar se o token foi armazenado corretamente
           const storedToken = localStorage.getItem('token');
+          const storedExpiry = localStorage.getItem('tokenExpiry');
           console.log('Token armazenado:', storedToken ? 'Sim' : 'Não');
+          console.log('Data de expiração:', storedExpiry);
+          
+          if (!storedToken || !storedExpiry) {
+            throw new Error('Falha ao armazenar token ou data de expiração');
+          }
         } else {
           console.error('Token não encontrado na resposta');
+          throw new Error('Token não encontrado na resposta');
         }
         
         // Atualizar o estado do usuário e salvar no cache
@@ -168,6 +199,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }
     } catch (error: any) {
       console.error('Erro ao fazer login:', error);
+      // Limpar dados em caso de erro
+      localStorage.removeItem('token');
+      localStorage.removeItem('tokenExpiry');
+      localStorage.removeItem('user');
       toast.error(error.message || error.response?.data?.error || 'Erro ao fazer login');
       throw error;
     }

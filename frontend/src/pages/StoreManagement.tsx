@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { 
@@ -13,30 +13,36 @@ import {
   UserPlusIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../contexts/AuthContext';
+import WhatsappApiSettings from '../components/WhatsappApiSettings';
+import EditStoreForm from '../components/EditStoreForm';
+import { Store, SimpleStore, EditStoreFormData } from '../types/store';
 
-// Interface simplificada para Store
-interface SimpleStore {
-  id: string;
-  name: string;
-  phone?: string;
-  email?: string;
-  address?: string;
-  city?: string;
-  state?: string;
-  zip_code?: string;
-  logo_url?: string;
-  is_active?: boolean;
-  created_at?: string;
-  
-  // Campos do banco de dados
-  contact_phone?: string;
-  contact_email?: string;
-  address_street?: string;
-  address_city?: string;
-  address_state?: string;
-  address_zip_code?: string;
-  images_logo?: string;
-}
+// Schema para edição de loja
+const editStoreSchema = yup.object({
+  name: yup.string().required('Nome da loja é obrigatório'),
+  description: yup.string(),
+  contact: yup.object({
+    phone: yup.string().required('Telefone é obrigatório'),
+    email: yup.string().email('Email inválido').required('Email é obrigatório'),
+    whatsapp: yup.string()
+  }).required(),
+  address: yup.object({
+    street: yup.string().required('Endereço é obrigatório'),
+    number: yup.string(),
+    complement: yup.string(),
+    neighborhood: yup.string().required('Bairro é obrigatório'),
+    city: yup.string().required('Cidade é obrigatória'),
+    state: yup.string().required('Estado é obrigatório'),
+    zipCode: yup.string().required('CEP é obrigatório')
+  }).required(),
+  whatsappApi: yup.object({
+    controlId: yup.string(),
+    host: yup.string(),
+    instanceKey: yup.string(),
+    token: yup.string(),
+    webhook: yup.string()
+  }).required().default({})
+});
 
 // Schema para criação de loja
 const createStoreSchema = yup.object({
@@ -47,20 +53,6 @@ const createStoreSchema = yup.object({
 
 type CreateStoreFormData = yup.InferType<typeof createStoreSchema>;
 
-// Schema para edição de loja
-const editStoreSchema = yup.object({
-  name: yup.string().required('Nome da loja é obrigatório'),
-  phone: yup.string().required('Telefone é obrigatório'),
-  email: yup.string().email('Email inválido').required('Email é obrigatório'),
-  address: yup.string(),
-  city: yup.string(),
-  state: yup.string(),
-  zip_code: yup.string(),
-  logo_url: yup.string().url('URL inválida').nullable(),
-});
-
-type EditStoreFormData = yup.InferType<typeof editStoreSchema>;
-
 // Schema para criar manager
 const createManagerSchema = yup.object({
   name: yup.string().required('Nome é obrigatório'),
@@ -69,8 +61,6 @@ const createManagerSchema = yup.object({
 });
 
 type CreateManagerFormData = yup.InferType<typeof createManagerSchema>;
-
-
 
 export default function StoreManagement() {
   const { user } = useAuth();
@@ -96,11 +86,10 @@ export default function StoreManagement() {
 
   // Form para editar loja
   const {
-    register: registerEdit,
     handleSubmit: handleSubmitEdit,
     reset: resetEdit,
     setValue: setValueEdit,
-    formState: { errors: errorsEdit, isSubmitting: isSubmittingEdit },
+    formState: { isSubmitting: isSubmittingEdit },
   } = useForm<EditStoreFormData>({
     resolver: yupResolver(editStoreSchema),
   });
@@ -122,8 +111,57 @@ export default function StoreManagement() {
 
   // Verificar se o usuário pode editar a loja
   const canEditStore = (store: SimpleStore): boolean => {
-    if (user?.role === 'superadmin') return true;
-    if (user?.role === 'manager' && user.store?.id === store.id) return true;
+    // Log inicial para debug
+    console.log('Verificando permissões de edição:', {
+      userExists: !!user,
+      userRole: user?.role,
+      storeExists: !!store,
+      storeId: store?.id,
+      storeName: store?.name,
+      storeData: store
+    });
+
+    // Se não há usuário ou store, não pode editar
+    if (!user || !store) {
+      console.log('Sem permissão: usuário ou loja não encontrados', { user, store });
+      return false;
+    }
+
+    // Superadmin pode editar qualquer loja
+    if (user.role === 'superadmin') {
+      console.log('Permissão concedida: usuário é superadmin', {
+        userId: user.id,
+        userRole: user.role,
+        storeId: store.id,
+        storeName: store.name
+      });
+      return true;
+    }
+
+    // Manager só pode editar sua própria loja
+    if (user.role === 'manager') {
+      const userStoreId = user.store?.id;
+      const storeId = store.id;
+      const hasPermission = !!(user.store && userStoreId === storeId);
+      
+      console.log('Verificando permissão para manager:', {
+        userStoreId,
+        storeId,
+        hasPermission,
+        userStore: user.store,
+        storeFromList: store,
+        typesMatch: typeof userStoreId === typeof storeId,
+        valuesMatch: userStoreId == storeId
+      });
+      
+      return hasPermission;
+    }
+
+    console.log('Sem permissão: role não autorizada', { 
+      userRole: user.role,
+      userId: user.id,
+      storeId: store.id
+    });
     return false;
   };
 
@@ -144,6 +182,13 @@ export default function StoreManagement() {
       );
     }
     
+    console.log('Lojas filtradas:', {
+      searchTerm,
+      totalStores: stores.length,
+      filteredCount: filtered.length,
+      filtered
+    });
+    
     setFilteredStores(filtered);
   }, [searchTerm, stores]);
 
@@ -153,12 +198,16 @@ export default function StoreManagement() {
       setLoading(true);
       setError(null);
       
-      // Determinar endpoint baseado no ambiente
       const isNetlifyDev = window.location.port === '8888';
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
       const endpoint = (isNetlifyDev || isProduction) ? '/.netlify/functions/stores-crud' : '/api/stores';
       
-      console.log('Carregando lojas do endpoint:', endpoint);
+      console.log('Carregando lojas do endpoint:', endpoint, {
+        isNetlifyDev,
+        isProduction,
+        port: window.location.port,
+        hostname: window.location.hostname
+      });
       
       const response = await fetch(endpoint, {
         method: 'GET',
@@ -169,17 +218,52 @@ export default function StoreManagement() {
       });
 
       if (!response.ok) {
+        console.error('Erro na resposta HTTP:', {
+          status: response.status,
+          statusText: response.statusText
+        });
         throw new Error(`Erro HTTP: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Dados recebidos:', data);
+      console.log('Dados recebidos das lojas:', {
+        success: data.success,
+        storesCount: data.stores?.length,
+        stores: data.stores
+      });
       
       if (data.success && Array.isArray(data.stores)) {
-        setStores(data.stores);
-        setFilteredStores(data.stores);
+        // Garantir que os dados da WhatsApp API sejam mantidos
+        const processedStores = data.stores.map((store: SimpleStore) => {
+          // Preservar os dados existentes do WhatsApp API
+          const existingStore = stores.find(s => s.id === store.id);
+          const whatsappApi = store.whatsappApi || existingStore?.whatsappApi || {
+            controlId: undefined,
+            host: undefined,
+            instanceKey: undefined,
+            token: undefined,
+            webhook: undefined
+          };
+
+          return {
+            ...store,
+            whatsappApi
+          };
+        });
+
+        console.log('Lojas processadas e carregadas:', {
+          totalStores: processedStores.length,
+          firstStore: processedStores[0],
+          whatsappApiData: processedStores.map((store: SimpleStore) => ({
+            id: store.id,
+            whatsappApi: store.whatsappApi
+          }))
+        });
+
+        setStores(processedStores);
+        setFilteredStores(processedStores);
       } else {
-        // Se não há lojas, inicializar com array vazio
+        console.log('Nenhuma loja encontrada ou formato inválido:', data);
         setStores([]);
         setFilteredStores([]);
       }
@@ -239,15 +323,136 @@ export default function StoreManagement() {
 
   // Abrir modal de edição
   const handleEdit = (store: SimpleStore) => {
+    console.log('Iniciando edição da loja:', {
+      storeId: store.id,
+      storeName: store.name,
+      currentUser: user,
+      storeData: store,
+      whatsappApi: store.whatsappApi
+    });
+
+    // Extrair dados do endereço do formato string, se necessário
+    let addressData = {
+      street: '',
+      number: '',
+      complement: '',
+      neighborhood: '',
+      city: '',
+      state: '',
+      zipCode: ''
+    };
+
+    // Garantir que temos dados da WhatsApp API
+    const whatsappApiData = {
+      controlId: store.whatsappApi?.controlId || undefined,
+      host: store.whatsappApi?.host || undefined,
+      instanceKey: store.whatsappApi?.instanceKey || undefined,
+      token: store.whatsappApi?.token || undefined,
+      webhook: store.whatsappApi?.webhook || undefined
+    };
+
+    console.log('Dados da WhatsApp API:', whatsappApiData);
+
+    try {
+      // Se o endereço está em formato JSON string, fazer o parse
+      if (store.address && typeof store.address === 'string' && store.address.startsWith('{')) {
+        console.log('Tentando parsear endereço JSON:', store.address);
+        const parsedAddress = JSON.parse(store.address);
+        addressData = {
+          street: parsedAddress.street || '',
+          number: parsedAddress.number || '',
+          complement: parsedAddress.complement || '',
+          neighborhood: parsedAddress.neighborhood || '',
+          city: parsedAddress.city || '',
+          state: parsedAddress.state || '',
+          zipCode: parsedAddress.zipCode || ''
+        };
+        console.log('Endereço parseado com sucesso:', addressData);
+      } else {
+        // Usar campos individuais do endereço
+        addressData = {
+          street: store.address_street || store.address || '',
+          number: store.address_number || '',
+          complement: store.address_complement || '',
+          neighborhood: store.address_neighborhood || '',
+          city: store.address_city || store.city || '',
+          state: store.address_state || store.state || '',
+          zipCode: store.address_zip_code || store.zip_code || ''
+        };
+        console.log('Usando campos individuais do endereço:', addressData);
+      }
+    } catch (error) {
+      console.error('Erro ao processar endereço:', error, {
+        address: store.address,
+        addressType: typeof store.address
+      });
+      // Em caso de erro, tentar extrair informações do endereço string
+      if (store.address && typeof store.address === 'string') {
+        const addressParts = store.address.split(',').map(part => part.trim());
+        addressData = {
+          street: addressParts[0] || '',
+          number: addressParts[1] || '',
+          complement: addressParts[2] || '',
+          neighborhood: addressParts[3] || '',
+          city: store.city || addressParts[4] || '',
+          state: store.state || addressParts[5] || '',
+          zipCode: store.zip_code || ''
+        };
+        console.log('Endereço extraído de string:', addressData);
+      } else {
+        // Usar campos individuais como fallback
+        addressData = {
+          street: store.address_street || store.address || '',
+          number: store.address_number || '',
+          complement: store.address_complement || '',
+          neighborhood: store.address_neighborhood || '',
+          city: store.address_city || store.city || '',
+          state: store.address_state || store.state || '',
+          zipCode: store.address_zip_code || store.zip_code || ''
+        };
+        console.log('Usando campos individuais como fallback:', addressData);
+      }
+    }
+
     setSelectedStore(store);
+    
+    // Definir valores básicos
     setValueEdit('name', store.name);
-    setValueEdit('phone', store.phone || '');
-    setValueEdit('email', store.email || '');
-    setValueEdit('address', store.address || '');
-    setValueEdit('city', store.city || '');
-    setValueEdit('state', store.state || 'SP');
-    setValueEdit('zip_code', store.zip_code || '');
-    setValueEdit('logo_url', store.logo_url || '');
+    setValueEdit('description', store.description || '');
+    
+    // Definir valores de contato
+    setValueEdit('contact.phone', store.contact_phone || store.phone || '');
+    setValueEdit('contact.email', store.contact_email || store.email || '');
+    setValueEdit('contact.whatsapp', store.contact?.whatsapp || '');
+    
+    // Definir valores do endereço
+    setValueEdit('address.street', addressData.street);
+    setValueEdit('address.number', addressData.number);
+    setValueEdit('address.complement', addressData.complement);
+    setValueEdit('address.neighborhood', addressData.neighborhood);
+    setValueEdit('address.city', addressData.city);
+    setValueEdit('address.state', addressData.state);
+    setValueEdit('address.zipCode', addressData.zipCode);
+
+    // Configurações do WhatsApp - usar os dados processados
+    setValueEdit('whatsappApi.controlId', whatsappApiData.controlId);
+    setValueEdit('whatsappApi.host', whatsappApiData.host);
+    setValueEdit('whatsappApi.instanceKey', whatsappApiData.instanceKey);
+    setValueEdit('whatsappApi.token', whatsappApiData.token);
+    setValueEdit('whatsappApi.webhook', whatsappApiData.webhook);
+
+    console.log('Valores definidos no formulário de edição:', {
+      name: store.name,
+      description: store.description,
+      address: addressData,
+      contact: {
+        phone: store.contact_phone || store.phone,
+        email: store.contact_email || store.email,
+        whatsapp: store.contact?.whatsapp
+      },
+      whatsappApi: whatsappApiData
+    });
+    
     setIsEditModalOpen(true);
   };
 
@@ -256,7 +461,10 @@ export default function StoreManagement() {
     if (!selectedStore) return;
     
     try {
-      console.log('Atualizando loja:', selectedStore.id, data);
+      console.log('Atualizando loja:', {
+        storeId: selectedStore.id,
+        formData: data
+      });
       
       const isNetlifyDev = window.location.port === '8888';
       const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
@@ -264,29 +472,97 @@ export default function StoreManagement() {
         ? `/.netlify/functions/stores-crud/${selectedStore.id}` 
         : `/api/stores/${selectedStore.id}`;
       
+      // Preparar dados para envio
+      const updateData = {
+        ...data,
+        id: selectedStore.id,
+        // Manter campos legados para compatibilidade
+        phone: data.contact.phone,
+        email: data.contact.email,
+        address: `${data.address.street}, ${data.address.number || 'S/N'}${data.address.complement ? ` - ${data.address.complement}` : ''}, ${data.address.neighborhood}`,
+        city: data.address.city,
+        state: data.address.state,
+        zip_code: data.address.zipCode,
+        // Campos novos
+        contact_phone: data.contact.phone,
+        contact_email: data.contact.email,
+        address_street: data.address.street,
+        address_number: data.address.number,
+        address_complement: data.address.complement,
+        address_neighborhood: data.address.neighborhood,
+        address_city: data.address.city,
+        address_state: data.address.state,
+        address_zip_code: data.address.zipCode,
+        // WhatsApp API - garantir que os campos vazios sejam undefined
+        whatsappApi: {
+          controlId: data.whatsappApi.controlId?.trim() || undefined,
+          host: data.whatsappApi.host?.trim() || undefined,
+          instanceKey: data.whatsappApi.instanceKey?.trim() || undefined,
+          token: data.whatsappApi.token?.trim() || undefined,
+          webhook: data.whatsappApi.webhook?.trim() || undefined
+        }
+      };
+
+      // Preservar dados existentes do WhatsApp API se nenhum campo foi alterado
+      if (selectedStore.whatsappApi && 
+          Object.values(updateData.whatsappApi).every(value => value === undefined)) {
+        console.log('Mantendo dados existentes do WhatsApp API:', selectedStore.whatsappApi);
+        updateData.whatsappApi = {
+          controlId: selectedStore.whatsappApi.controlId || undefined,
+          host: selectedStore.whatsappApi.host || undefined,
+          instanceKey: selectedStore.whatsappApi.instanceKey || undefined,
+          token: selectedStore.whatsappApi.token || undefined,
+          webhook: selectedStore.whatsappApi.webhook || undefined
+        };
+      }
+
+      console.log('Dados preparados para envio:', updateData);
+      
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
         },
-        body: JSON.stringify({
-          ...data,
-          id: selectedStore.id
-        })
+        body: JSON.stringify(updateData)
       });
 
-      const result = await response.json();
-      
       if (!response.ok) {
-        throw new Error(result.error || result.message || 'Erro ao atualizar loja');
+        const errorData = await response.json();
+        console.error('Erro na resposta do servidor:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        throw new Error(errorData.error || errorData.message || 'Erro ao atualizar loja');
       }
 
+      const result = await response.json();
+      console.log('Resposta do servidor após atualização:', result);
+      
+      // Atualizar a loja no estado local antes de recarregar
+      const updatedStore = {
+        ...selectedStore,
+        ...updateData,
+        whatsappApi: updateData.whatsappApi
+      };
+      
+      setStores(prevStores => 
+        prevStores.map((store: SimpleStore) => 
+          store.id === selectedStore.id ? updatedStore : store
+        )
+      );
+      
       toast.success('Loja atualizada com sucesso!');
       setIsEditModalOpen(false);
       resetEdit();
       setSelectedStore(null);
-      loadStores();
+      
+      // Recarregar os dados da loja em segundo plano
+      loadStores().catch(error => {
+        console.error('Erro ao recarregar lojas:', error);
+        // Se falhar ao recarregar, pelo menos os dados locais já foram atualizados
+      });
     } catch (error: any) {
       console.error('Erro ao atualizar loja:', error);
       toast.error(error.message || 'Erro ao atualizar loja');
@@ -458,11 +734,41 @@ export default function StoreManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{store.name}</div>
-                    {(store.address_street || store.address) && (
-                      <div className="text-sm text-gray-500">
-                        {store.address_street || store.address}
-                      </div>
-                    )}
+                    {(() => {
+                      try {
+                        // Tentar parsear o endereço se estiver em formato JSON
+                        if (store.address && typeof store.address === 'string' && store.address.startsWith('{')) {
+                          const addressData = JSON.parse(store.address);
+                          return (
+                            <div className="text-sm text-gray-500">
+                              {`${addressData.street}${addressData.number ? `, ${addressData.number}` : ''}`}
+                              {addressData.neighborhood ? ` - ${addressData.neighborhood}` : ''}
+                              {addressData.city ? `, ${addressData.city}` : ''}
+                              {addressData.state ? `-${addressData.state}` : ''}
+                            </div>
+                          );
+                        }
+                        
+                        // Se não for JSON, usar os campos individuais
+                        if (store.address_street || store.address) {
+                          return (
+                            <div className="text-sm text-gray-500">
+                              {store.address_street || store.address}
+                              {store.address_city ? `, ${store.address_city}` : ''}
+                              {store.address_state ? `-${store.address_state}` : ''}
+                            </div>
+                          );
+                        }
+                      } catch (error) {
+                        console.error('Erro ao processar endereço:', error);
+                        // Em caso de erro, mostrar o endereço como está
+                        return store.address && (
+                          <div className="text-sm text-gray-500">
+                            {store.address}
+                          </div>
+                        );
+                      }
+                    })()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {store.contact_phone || store.phone || '-'}
@@ -486,37 +792,50 @@ export default function StoreManagement() {
                     }
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {canEditStore(store) ? (
-                      <>
-                        <button
-                          onClick={() => handleEdit(store)}
-                          className="text-primary-600 hover:text-primary-900 mr-3"
-                          title="Gerenciar loja"
-                        >
-                          Gerenciar
-                        </button>
-                        {isSuperAdmin && (
-                          <>
-                            <button
-                              onClick={() => handleCreateManager(store)}
-                              className="text-green-600 hover:text-green-900 mr-3"
-                              title="Criar dono da loja"
-                            >
-                              <UserPlusIcon className="w-5 h-5 inline" />
-                              Criar Dono
-                            </button>
-                            <button
-                              className="text-red-600 hover:text-red-900"
-                              title="Excluir loja"
-                            >
-                              Excluir
-                            </button>
-                          </>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
+                    {(() => {
+                      const canEdit = canEditStore(store);
+                      console.log('Renderizando botões de ação:', {
+                        storeName: store.name,
+                        storeId: store.id,
+                        canEdit,
+                        isSuperAdmin,
+                        userRole: user?.role
+                      });
+
+                      if (!canEdit) {
+                        return <span className="text-gray-400">-</span>;
+                      }
+
+                      return (
+                        <>
+                          <button
+                            onClick={() => handleEdit(store)}
+                            className="text-primary-600 hover:text-primary-900 mr-3"
+                            title="Gerenciar loja"
+                          >
+                            Gerenciar
+                          </button>
+                          {isSuperAdmin && (
+                            <>
+                              <button
+                                onClick={() => handleCreateManager(store)}
+                                className="text-green-600 hover:text-green-900 mr-3"
+                                title="Criar dono da loja"
+                              >
+                                <UserPlusIcon className="w-5 h-5 inline" />
+                                Criar Dono
+                              </button>
+                              <button
+                                className="text-red-600 hover:text-red-900"
+                                title="Excluir loja"
+                              >
+                                Excluir
+                              </button>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
                   </td>
                 </motion.tr>
               ))}
@@ -620,207 +939,16 @@ export default function StoreManagement() {
 
       {/* Modal para editar loja */}
       {isEditModalOpen && selectedStore && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
-          >
-            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Gerenciar Loja
-              </h3>
-              <button
-                onClick={() => {
-                  setIsEditModalOpen(false);
-                  resetEdit();
-                  setSelectedStore(null);
-                }}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <XMarkIcon className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmitEdit(onSubmitEdit)} className="px-6 py-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Informações Básicas */}
-                <div className="md:col-span-2">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Informações Básicas</h4>
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Nome da Loja *
-                  </label>
-                  <input
-                    {...registerEdit('name')}
-                    id="edit-name"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.name && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.name.message}</p>
-                  )}
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Telefone *
-                  </label>
-                  <input
-                    {...registerEdit('phone')}
-                    id="edit-phone"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.phone && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.phone.message}</p>
-                  )}
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="edit-email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
-                    {...registerEdit('email')}
-                    id="edit-email"
-                    type="email"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  {errorsEdit.email && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.email.message}</p>
-                  )}
-                </div>
-                
-                {/* Endereço */}
-                <div className="md:col-span-2 mt-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Endereço</h4>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="edit-address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Endereço
-                  </label>
-                  <input
-                    {...registerEdit('address')}
-                    id="edit-address"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="Rua, número, complemento"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-city" className="block text-sm font-medium text-gray-700 mb-1">
-                    Cidade
-                  </label>
-                  <input
-                    {...registerEdit('city')}
-                    id="edit-city"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-state" className="block text-sm font-medium text-gray-700 mb-1">
-                    Estado
-                  </label>
-                  <select
-                    {...registerEdit('state')}
-                    id="edit-state"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                  >
-                    <option value="AC">AC</option>
-                    <option value="AL">AL</option>
-                    <option value="AP">AP</option>
-                    <option value="AM">AM</option>
-                    <option value="BA">BA</option>
-                    <option value="CE">CE</option>
-                    <option value="DF">DF</option>
-                    <option value="ES">ES</option>
-                    <option value="GO">GO</option>
-                    <option value="MA">MA</option>
-                    <option value="MT">MT</option>
-                    <option value="MS">MS</option>
-                    <option value="MG">MG</option>
-                    <option value="PA">PA</option>
-                    <option value="PB">PB</option>
-                    <option value="PR">PR</option>
-                    <option value="PE">PE</option>
-                    <option value="PI">PI</option>
-                    <option value="RJ">RJ</option>
-                    <option value="RN">RN</option>
-                    <option value="RS">RS</option>
-                    <option value="RO">RO</option>
-                    <option value="RR">RR</option>
-                    <option value="SC">SC</option>
-                    <option value="SP">SP</option>
-                    <option value="SE">SE</option>
-                    <option value="TO">TO</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="edit-zip" className="block text-sm font-medium text-gray-700 mb-1">
-                    CEP
-                  </label>
-                  <input
-                    {...registerEdit('zip_code')}
-                    id="edit-zip"
-                    type="text"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="00000-000"
-                  />
-                </div>
-                
-                {/* Logo */}
-                <div className="md:col-span-2 mt-4">
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Imagens</h4>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label htmlFor="edit-logo" className="block text-sm font-medium text-gray-700 mb-1">
-                    URL do Logo
-                  </label>
-                  <input
-                    {...registerEdit('logo_url')}
-                    id="edit-logo"
-                    type="url"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500"
-                    placeholder="https://exemplo.com/logo.png"
-                  />
-                  {errorsEdit.logo_url && (
-                    <p className="mt-1 text-sm text-red-600">{errorsEdit.logo_url.message}</p>
-                  )}
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditModalOpen(false);
-                    resetEdit();
-                    setSelectedStore(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingEdit}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
-                >
-                  {isSubmittingEdit ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
+        <EditStoreForm
+          store={selectedStore}
+          onSubmit={onSubmitEdit}
+          onCancel={() => {
+            setIsEditModalOpen(false);
+            resetEdit();
+            setSelectedStore(null);
+          }}
+          isSubmitting={isSubmittingEdit}
+        />
       )}
 
       {/* Modal para criar manager */}

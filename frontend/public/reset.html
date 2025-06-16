@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Superadmin</title>
+</head>
+<body>
+    <h1>Reset Superadmin Password</h1>
+    <button onclick="resetPassword('DominioTech@2025')">Reset com senha original</button>
+    <button onclick="resetPassword('SuperAdmin@123')">Reset com senha alternativa</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function resetPassword(password) {
+            try {
+                const response = await fetch('https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions/diagnose-db', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'reset_superadmin',
+                        name: 'Super Admin',
+                        email: 'admin@dominiotech.com',
+                        password: password
+                    })
+                });
+                
+                const result = await response.json();
+                document.getElementById('output').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('output').textContent = 'Erro: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html> 

@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "description": "DomínioTech - Sistema de Gestão para Restaurantes com IA",
   "scripts": {
+    "start": "cd frontend && npm start",
     "dev": "netlify dev",
-    "build": "cd frontend && npm install --force && CI=false npm run build",
-    "build:netlify": "npm install --force && cd frontend && npm install --force && CI=false npm run build",
+    "build": "cd frontend && npm install --force && cross-env CI=false npm run build",
+    "build:netlify": "npm install --force && cd frontend && npm install --force && cross-env CI=false npm run build",
     "install:all": "npm install && cd frontend && npm install",
     "create-superadmin": "node scripts/create-superadmin.js",
     "db:seed": "node scripts/seed-database.js"
@@ -14,9 +15,11 @@
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "openai": "^4.104.0",
-    "pg": "^8.16.0"
+    "pg": "^8.16.0",
+    "react-icons": "^5.5.0"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "netlify-cli": "^17.10.1"
   }
 }

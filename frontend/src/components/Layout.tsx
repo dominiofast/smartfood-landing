@@ -22,6 +22,7 @@ import {
   DocumentTextIcon,
   UserGroupIcon,
   ComputerDesktopIcon,
+  ChevronLeftIcon,
 } from '@heroicons/react/24/outline';
 
 const Layout: React.FC = () => {
@@ -30,6 +31,8 @@ const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [settingsExpanded, setSettingsExpanded] = useState(false);
+  const [teamExpanded, setTeamExpanded] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const getMenuItems = () => {
     const baseItems = [
@@ -50,6 +53,7 @@ const Layout: React.FC = () => {
         { name: 'Usuários', href: '/superadmin/users', icon: UsersIcon },
         { name: 'Assistente IA', href: '/superadmin/ai-assistant', icon: SparklesIcon },
         { name: 'Relatórios', href: '/superadmin/reports', icon: ChartBarIcon },
+        { name: 'Conectar WhatsApp', href: '/superadmin/whatsapp', icon: ChatBubbleBottomCenterTextIcon },
       ];
     }
 
@@ -62,6 +66,7 @@ const Layout: React.FC = () => {
       { name: 'Equipe', href: '/manager/users', icon: UsersIcon },
       { name: 'Assistente IA', href: '/manager/ai-assistant', icon: SparklesIcon },
       { name: 'Relatórios', href: '/manager/reports', icon: ChartBarIcon },
+      { name: 'Conectar WhatsApp', href: '/manager/whatsapp', icon: ChatBubbleBottomCenterTextIcon },
     ];
   };
 
@@ -69,6 +74,15 @@ const Layout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Botão para abrir sidebar em telas pequenas */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="fixed top-4 left-4 z-50 p-2 rounded-lg bg-white shadow-lg border border-gray-200 lg:hidden"
+        aria-label="Abrir menu lateral"
+      >
+        <Bars3Icon className="w-6 h-6 text-gray-700" />
+      </button>
+
       {/* Mobile sidebar */}
       <AnimatePresence>
         {sidebarOpen && (
@@ -151,6 +165,19 @@ const Layout: React.FC = () => {
                         >
                           Cardápio Digital
                         </Link>
+                        {/* Nova opção Área de Entrega */}
+                        {user?.role !== 'superadmin' && (
+                          <Link
+                            to="/manager/settings/delivery-area"
+                            className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                              location.pathname.includes('/settings/delivery-area')
+                                ? 'bg-primary-100 text-primary-700'
+                                : 'text-gray-600 hover:bg-gray-100'
+                            }`}
+                          >
+                            Área de Entrega
+                          </Link>
+                        )}
                       </div>
                     )}
                   </div>
@@ -162,19 +189,69 @@ const Layout: React.FC = () => {
       </AnimatePresence>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
+      <div className={`hidden lg:fixed lg:inset-y-0 lg:flex lg:flex-col transition-all duration-200 ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'}`}>
         <div className="flex flex-grow flex-col overflow-y-auto bg-white border-r border-gray-200">
-          <div className="flex items-center justify-center h-16 px-4 border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-primary-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <SparklesIcon className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold">DomínioTech</span>
+              {!sidebarCollapsed && <span className="text-xl font-bold">DomínioTech</span>}
             </div>
+            {/* Botão para recolher/expandir sidebar */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className="ml-2 p-1 rounded hover:bg-gray-100 transition-colors"
+              aria-label={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'}
+            >
+              {sidebarCollapsed ? <ChevronRightIcon className="w-5 h-5" /> : <ChevronLeftIcon className="w-5 h-5" />}
+            </button>
           </div>
           <nav className="flex-1 px-4 py-4 space-y-1">
             {menuItems.map((item) => {
               const isActive = location.pathname === item.href;
+              if (item.name === 'Equipe') {
+                return (
+                  <div key={item.name}>
+                    <button
+                      onClick={() => setTeamExpanded(!teamExpanded)}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg w-full text-left transition-colors ${
+                        location.pathname.startsWith('/manager/users')
+                          ? 'bg-primary-100 text-primary-700'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      {!sidebarCollapsed && <span>{item.name}</span>}
+                      {!sidebarCollapsed && (teamExpanded ? <ChevronDownIcon className="w-4 h-4 ml-auto" /> : <ChevronRightIcon className="w-4 h-4 ml-auto" />)}
+                    </button>
+                    {teamExpanded && !sidebarCollapsed && (
+                      <div className="ml-8 mt-1 space-y-1">
+                        <Link
+                          to="/manager/users"
+                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                            location.pathname === '/manager/users'
+                              ? 'bg-primary-100 text-primary-700'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Gerenciar Usuários
+                        </Link>
+                        <Link
+                          to="/manager/users/add"
+                          className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                            location.pathname === '/manager/users/add'
+                              ? 'bg-primary-100 text-primary-700'
+                              : 'text-gray-600 hover:bg-gray-100'
+                          }`}
+                        >
+                          Adicionar Funcionário
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={item.name}
@@ -186,64 +263,83 @@ const Layout: React.FC = () => {
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
-                  <span>{item.name}</span>
+                  {!sidebarCollapsed && <span>{item.name}</span>}
                 </Link>
               );
             })}
             
             {/* Configurações com submenu */}
-            <div className="mt-4">
-              <button
-                onClick={() => setSettingsExpanded(!settingsExpanded)}
-                className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <Cog6ToothIcon className="w-5 h-5" />
-                  <span>Configurações</span>
-                </div>
-                {settingsExpanded ? (
-                  <ChevronDownIcon className="w-4 h-4" />
-                ) : (
-                  <ChevronRightIcon className="w-4 h-4" />
+            {!sidebarCollapsed && (
+              <div className="mt-4">
+                <button
+                  onClick={() => setSettingsExpanded(!settingsExpanded)}
+                  className="w-full flex items-center justify-between px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Cog6ToothIcon className="w-5 h-5" />
+                    <span>Configurações</span>
+                  </div>
+                  {settingsExpanded ? (
+                    <ChevronDownIcon className="w-4 h-4" />
+                  ) : (
+                    <ChevronRightIcon className="w-4 h-4" />
+                  )}
+                </button>
+                {settingsExpanded && (
+                  <div className="mt-1 ml-8 space-y-1">
+                    <Link
+                      to={user?.role === 'superadmin' ? '/superadmin/settings/digital-menu' : '/manager/settings/digital-menu'}
+                      className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                        location.pathname.includes('/settings/digital-menu')
+                          ? 'bg-primary-100 text-primary-700'
+                          : 'text-gray-600 hover:bg-gray-100'
+                      }`}
+                    >
+                      Cardápio Digital
+                    </Link>
+                    {/* Nova opção Área de Entrega */}
+                    {user?.role !== 'superadmin' && (
+                      <Link
+                        to="/manager/settings/delivery-area"
+                        className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
+                          location.pathname.includes('/settings/delivery-area')
+                            ? 'bg-primary-100 text-primary-700'
+                            : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        Área de Entrega
+                      </Link>
+                    )}
+                  </div>
                 )}
-              </button>
-              {settingsExpanded && (
-                <div className="mt-1 ml-8 space-y-1">
-                  <Link
-                    to={user?.role === 'superadmin' ? '/superadmin/settings/digital-menu' : '/manager/settings/digital-menu'}
-                    className={`block px-3 py-2 text-sm rounded-lg transition-colors ${
-                      location.pathname.includes('/settings/digital-menu')
-                        ? 'bg-primary-100 text-primary-700'
-                        : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    Cardápio Digital
-                  </Link>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </nav>
           <div className="p-4 border-t border-gray-200">
             <div className="flex items-center space-x-3 mb-4">
               <UserCircleIcon className="w-10 h-10 text-gray-400" />
-              <div>
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.role}</p>
-              </div>
+              {!sidebarCollapsed && (
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                  <p className="text-xs text-gray-500">{user?.role}</p>
+                </div>
+              )}
             </div>
-            <button
-              onClick={logout}
-              className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 text-sm"
-            >
-              <ArrowRightOnRectangleIcon className="w-4 h-4" />
-              <span>Sair</span>
-            </button>
+            {!sidebarCollapsed && (
+              <button
+                onClick={logout}
+                className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 text-sm"
+              >
+                <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                <span>Sair</span>
+              </button>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="lg:pl-64">
+      <div className={sidebarCollapsed ? "lg:pl-20" : "lg:pl-64"}>
         {/* Top bar */}
         <div className="sticky top-0 z-30 bg-white border-b border-gray-200">
           <div className="px-4 sm:px-6 lg:px-8">
