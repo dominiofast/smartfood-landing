@@ -37,6 +37,7 @@ export const handler: Handler = async (event) => {
     'http://localhost:3001',
     'http://localhost:3002',
     'http://localhost:8888',
+    'http://localhost:8999',
     'https://peppy-narwhal-64ff9e.netlify.app'
   ];
 
@@ -175,6 +176,70 @@ export const handler: Handler = async (event) => {
           error: 'Erro interno do servidor',
           details: error instanceof Error ? error.message : 'Erro desconhecido'
         })
+      };
+    }
+  }
+
+  // Verifica se é uma requisição GET para /auth/me
+  if ((event.path === '/auth/me' || event.path === '/.netlify/functions/auth/me') && event.httpMethod === 'GET') {
+    try {
+      // Extrai token do header Authorization: Bearer <token>
+      const authHeader = event.headers.authorization || event.headers.Authorization;
+      if (!authHeader) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({ error: 'Token não fornecido' })
+        };
+      }
+
+      const token = authHeader.split(' ')[1];
+      if (!token) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({ error: 'Token malformado' })
+        };
+      }
+
+      // Verifica token
+      let decoded: any;
+      try {
+        decoded = jwt.verify(token, process.env.JWT_SECRET || 'chave_super_secreta_123');
+      } catch (err) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({ error: 'Token inválido ou expirado' })
+        };
+      }
+
+      // Busca usuário
+      const result = await pool.query(
+        'SELECT id, email, name, role FROM users WHERE id = $1',
+        [decoded.userId]
+      );
+
+      const user = result.rows[0];
+      if (!user) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Usuário não encontrado' })
+        };
+      }
+
+      return {
+        statusCode: 200,
+        headers,
+        body: JSON.stringify({ success: true, data: user })
+      };
+    } catch (error) {
+      console.error('Erro em /auth/me:', error);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({ error: 'Erro interno do servidor', details: error instanceof Error ? error.message : 'erro' })
       };
     }
   }

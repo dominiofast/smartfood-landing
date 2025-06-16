@@ -2,7 +2,7 @@ import axios, { AxiosInstance } from 'axios';
 import { User, LoginCredentials, AuthResponse } from '../types';
 
 // Define a URL base da API usando a variável de ambiente do Vite
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8888/.netlify/functions';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8999/.netlify/functions';
 
 class AuthService {
   private api: AxiosInstance;

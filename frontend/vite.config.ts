@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   // Em desenvolvimento, usa localhost, em produção usa a URL do Netlify
   const apiUrl = mode === 'production' 
     ? 'https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions'
-    : 'http://localhost:8888/.netlify/functions';
+    : 'http://localhost:8999/.netlify/functions';
   
   console.log('Mode:', mode);
   console.log('API URL:', apiUrl);
@@ -29,7 +29,7 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       proxy: {
         '/.netlify/functions': {
-          target: 'http://localhost:8888',
+          target: 'http://localhost:8999',
           changeOrigin: true,
           secure: false,
           rewrite: (path) => path,

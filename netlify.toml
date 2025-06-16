@@ -5,7 +5,7 @@
 
 [dev]
   command = "npm run dev:frontend"
-  port = 8888
+  port = 8999
   targetPort = 3000
   publish = "frontend/build"
   autoLaunch = true

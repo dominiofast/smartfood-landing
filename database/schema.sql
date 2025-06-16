@@ -1,4 +1,7 @@
 -- DomínioTech Database Schema for Neon PostgreSQL
+-- Garantir extensão pgcrypto para utilizar gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- Drop existing tables if they exist
 DROP TABLE IF EXISTS ai_analyses CASCADE;
 DROP TABLE IF EXISTS ai_messages CASCADE;
