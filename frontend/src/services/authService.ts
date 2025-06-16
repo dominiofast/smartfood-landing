@@ -1,11 +1,7 @@
 import { User, LoginCredentials, AuthResponse } from '../types';
 
-// Define a URL base da API de forma centralizada
-// Em produção, as requisições serão relativas (ex: /api/auth/login)
-// e o Netlify se encarregará do redirecionamento.
-// Em desenvolvimento, o proxy do package.json (se houver) ou a configuração
-// do axios deve apontar para o backend (ex: http://localhost:5000/api)
-const API_BASE_URL = '/api';
+// Define a URL base da API usando a variável de ambiente
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 class AuthService {
   // Função para verificar se há token válido
@@ -32,14 +28,28 @@ class AuthService {
 
     try {
       const response = await fetch(url, { ...options, headers });
+      
+      // Verifica o Content-Type da resposta
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Servidor retornou uma resposta inválida. Por favor, tente novamente.');
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Ocorreu um erro na requisição.');
+        // Se o servidor retornou um erro em formato JSON
+        throw new Error(data.error || data.message || 'Ocorreu um erro na requisição.');
       }
       return data;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Erro na requisição para ${url}:`, error);
+      
+      // Se o erro for de parsing JSON, significa que recebemos HTML ou outro formato
+      if (error instanceof SyntaxError) {
+        throw new Error('Não foi possível conectar ao servidor. Por favor, verifique sua conexão.');
+      }
+      
       throw error;
     }
   }
