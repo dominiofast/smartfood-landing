@@ -321,6 +321,46 @@ export default function StoreManagement() {
     }
   };
 
+  // Abrir modal de edição
+  const handleEdit = (store: SimpleStore) => {
+    // Extrair dados do endereço do formato string, se necessário
+    let addressData = {
+      street: '', number: '', complement: '', neighborhood: '',
+      city: '', state: '', zipCode: ''
+    };
+
+    try {
+      if (store.address && typeof store.address === 'string' && store.address.startsWith('{')) {
+        const parsedAddress = JSON.parse(store.address);
+        addressData = { ...addressData, ...parsedAddress };
+      } else {
+        addressData = {
+          street: store.address_street || store.address || '',
+          number: store.address_number || '',
+          complement: store.address_complement || '',
+          neighborhood: store.address_neighborhood || '',
+          city: store.address_city || store.city || '',
+          state: store.address_state || store.state || '',
+          zipCode: store.address_zip_code || store.zip_code || ''
+        };
+      }
+    } catch (e) {
+      console.error("Erro ao processar endereço:", e);
+    }
+    
+    setSelectedStore(store);
+    
+    setValueEdit('name', store.name);
+    setValueEdit('description', store.description || '');
+    setValueEdit('contact.phone', store.contact_phone || store.phone || '');
+    setValueEdit('contact.email', store.contact_email || store.email || '');
+    setValueEdit('contact.whatsapp', store.contact?.whatsapp || '');
+    setValueEdit('address', addressData);
+    setValueEdit('whatsappApi', store.whatsappApi || {});
+
+    setIsEditModalOpen(true);
+  };
+
   // Atualizar loja
   const onSubmitEdit = async (data: EditStoreFormData) => {
     if (!selectedStore) {
