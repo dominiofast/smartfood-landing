@@ -21,7 +21,7 @@
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/api/:splat"
-  status = 200
+  status = 200!
 
 # Regra geral para Single Page Application (SPA).
 # Deve ser a última regra para capturar todas as outras rotas.
