@@ -1,5 +1,11 @@
-import api from '../api/axios';
 import { User, LoginCredentials, AuthResponse } from '../types';
+
+// Define a URL base da API de forma centralizada
+// Em produção, as requisições serão relativas (ex: /api/auth/login)
+// e o Netlify se encarregará do redirecionamento.
+// Em desenvolvimento, o proxy do package.json (se houver) ou a configuração
+// do axios deve apontar para o backend (ex: http://localhost:5000/api)
+const API_BASE_URL = '/api';
 
 class AuthService {
   // Função para verificar se há token válido
@@ -8,128 +14,89 @@ class AuthService {
     return !!token;
   }
 
-  // Função para obter o token
-  getToken(): string | null {
+  private getToken(): string | null {
     return localStorage.getItem('token');
   }
 
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+    const url = `${API_BASE_URL}${endpoint}`;
+    const token = this.getToken();
+
+    const headers: { [key: string]: string } = {
+      'Content-Type': 'application/json',
+    };
+
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
     try {
-      // Verificar se estamos usando Netlify Dev (porta 8888) ou desenvolvimento puro (porta 3000)
-      const isNetlifyDev = window.location.port === '8888';
-      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      
-      const endpoint = (isNetlifyDev || isProduction)
-        ? '/.netlify/functions/auth-login' 
-        : '/auth/login';
-      
-      console.log('Fazendo login em:', endpoint);
-      console.log('Dados enviados:', credentials);
-      console.log('Porta atual:', window.location.port);
-      console.log('Hostname atual:', window.location.hostname);
-      
-      // Fazer a requisição diretamente para garantir que recebemos a resposta correta
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(credentials)
-      });
-      
-      console.log('Status da resposta:', response.status);
-      console.log('Headers da resposta:', response.headers);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
-      }
-      
+      const response = await fetch(url, { ...options, headers });
       const data = await response.json();
-      console.log('Resposta do login:', data);
-      
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Ocorreu um erro na requisição.');
+      }
       return data;
     } catch (error) {
-      console.error('Erro no serviço de login:', error);
+      console.error(`Erro na requisição para ${url}:`, error);
       throw error;
     }
   }
 
-  async register(userData: {
-    name: string;
-    email: string;
-    password: string;
-    role?: string;
-    storeId?: string;
-  }): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/register', userData);
-    return response.data;
+  async login(credentials: LoginCredentials): Promise<AuthResponse> {
+    return this.request('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    });
   }
 
   async getMe(): Promise<User> {
     try {
-      // Verificar se estamos usando Netlify Dev (porta 8888) ou desenvolvimento puro (porta 3000)
-      const isNetlifyDev = window.location.port === '8888';
-      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      
-      const endpoint = (isNetlifyDev || isProduction)
-        ? '/.netlify/functions/auth-me' 
-        : '/auth/me';
-      
-      console.log('Fazendo getMe em:', endpoint);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token não encontrado');
-      }
-      
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          throw new Error('Token inválido ou expirado');
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Resposta do getMe:', data);
-      
-      // Retornar o user dependendo da estrutura da resposta
-      return data.data || data.user || data;
+      const response = await this.request<{ success: boolean; data: User }>('/auth/me');
+      return response.data;
     } catch (error) {
-      console.error('Erro no getMe:', error);
+      // Se a sessão for inválida, limpa o localStorage para evitar loops.
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       throw error;
     }
   }
 
+  async register(userData: any): Promise<AuthResponse> {
+    return this.request('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData)
+    });
+  }
+
   async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await api.put<{ success: boolean; data: User }>('/auth/updateprofile', data);
-    return response.data.data;
+    const response = await this.request<{ success: boolean; data: User }>('/auth/updateprofile', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+    return response.data;
   }
 
   async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await api.put('/auth/updatepassword', {
-      currentPassword,
-      newPassword,
+    await this.request('/auth/updatepassword', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
     });
   }
 
   async logout(): Promise<void> {
-    await api.get('/auth/logout');
+    // A rota de logout pode não existir ou não ser necessária se o logout for só no frontend
+    try {
+        await this.request('/auth/logout', { method: 'GET' });
+    } catch (error) {
+        console.warn("Chamada para /auth/logout falhou (isso pode ser esperado).", error);
+    }
   }
 
   async createSuperAdmin(): Promise<User> {
-    const response = await api.post<{ success: boolean; data: User }>('/auth/create-superadmin');
-    return response.data.data;
+    const response = await this.request<{ success: boolean, data: User }>('/auth/create-superadmin', { method: 'POST' });
+    return response.data;
   }
 }
 
