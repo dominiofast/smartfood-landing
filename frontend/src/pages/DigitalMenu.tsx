@@ -304,7 +304,7 @@ export default function DigitalMenu() {
 
       {/* Hero Carousel */}
       {highlights.length > 0 && (
-        <div className="relative h-[400px] md:h-[500px] overflow-hidden bg-black mx-auto" style={{ maxWidth: '70vw' }}>
+        <div className="relative w-full" style={{ height: '30vh', minHeight: '200px', maxHeight: '400px' }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={currentSlide}
