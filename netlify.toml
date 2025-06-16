@@ -1,6 +1,6 @@
 [build]
   command = "npm run build:netlify"
-  functions = "backend/src"
+  functions = "netlify/functions"
   publish = "frontend/build"
 
 [dev]
@@ -22,10 +22,10 @@
   to = "/index.html"
   status = 200
 
-# API redirects to Netlify Functions
+# API redirects to our single serverless function
 [[redirects]]
   from = "/api/*"
-  to = "/.netlify/functions/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
 
 [functions]
