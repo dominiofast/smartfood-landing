@@ -98,7 +98,7 @@ class AuthService {
     try {
       console.log('Tentando fazer login com:', { email: credentials.email });
       
-      const { data } = await this.api.post<AuthResponse>('/auth/login', credentials);
+      const { data } = await this.api.post<AuthResponse>('/.netlify/functions/auth/login', credentials);
       
       if (data.token) {
         localStorage.setItem('token', data.token);
