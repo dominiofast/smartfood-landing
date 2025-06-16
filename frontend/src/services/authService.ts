@@ -1,59 +1,55 @@
+import axios, { AxiosInstance } from 'axios';
 import { User, LoginCredentials, AuthResponse } from '../types';
 
 // Define a URL base da API usando a variável de ambiente do Vite
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 class AuthService {
-  // Função para verificar se há token válido
-  isAuthenticated(): boolean {
-    const token = localStorage.getItem('token');
-    return !!token;
-  }
+  private api: AxiosInstance;
 
-  private getToken(): string | null {
-    return localStorage.getItem('token');
-  }
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 10000, // 10 segundos
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      withCredentials: true, // Importante para cookies de sessão
+    });
 
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}${endpoint}`;
-    const token = this.getToken();
+    // Interceptor para adicionar o token em todas as requisições
+    this.api.interceptors.request.use(
+      (config) => {
+        const token = this.getToken();
+        if (token && config.headers) {
+          config.headers['Authorization'] = `Bearer ${token}`;
+        }
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
 
-    const headers: { [key: string]: string } = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+    // Interceptor para tratar erros de resposta
+    this.api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        console.error('Erro na requisição:', error);
 
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    try {
-      console.log(`Fazendo requisição para: ${url}`);
-      
-      const response = await fetch(url, {
-        ...options,
-        headers,
-        credentials: 'include', // Importante para cookies de sessão
-      });
-      
-      // Log da resposta para debug
-      console.log(`Status da resposta: ${response.status}`);
-      console.log(`Headers da resposta:`, Object.fromEntries(response.headers.entries()));
-
-      // Verifica se a resposta é um erro de rede
-      if (!response.ok) {
-        // Tenta ler o corpo da resposta
-        let errorData;
-        try {
-          errorData = await response.json();
-        } catch (e) {
-          errorData = { message: 'Erro desconhecido no servidor' };
+        if (!error.response) {
+          // Erro de rede ou timeout
+          throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão de internet e tente novamente.');
         }
 
-        // Tratamento específico por status
-        switch (response.status) {
+        const { status, data } = error.response;
+
+        switch (status) {
           case 401:
-            throw new Error('Não autorizado. Por favor, faça login novamente.');
+            // Limpa dados de autenticação e redireciona para login
+            this.clearAuthData();
+            throw new Error('Sessão expirada. Por favor, faça login novamente.');
           case 403:
             throw new Error('Acesso negado. Você não tem permissão para acessar este recurso.');
           case 404:
@@ -61,48 +57,61 @@ class AuthService {
           case 500:
             throw new Error('Erro interno do servidor. Por favor, tente novamente mais tarde.');
           default:
-            throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+            throw new Error(data?.message || `Erro ${status}: Ocorreu um problema inesperado.`);
         }
       }
+    );
+  }
 
-      // Verifica o Content-Type da resposta
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Resposta inválida do servidor. Esperava JSON.');
-      }
+  // Função para verificar se há token válido
+  isAuthenticated(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
 
-      const data = await response.json();
-      return data;
-    } catch (error: any) {
-      console.error(`Erro na requisição para ${url}:`, error);
-      
-      // Se for um erro de rede (sem conexão)
-      if (error instanceof TypeError && error.message === 'Failed to fetch') {
-        throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão de internet.');
+    // Verifica se o token está expirado
+    const tokenExpiry = localStorage.getItem('tokenExpiry');
+    if (tokenExpiry) {
+      const expiryDate = new Date(tokenExpiry);
+      if (expiryDate < new Date()) {
+        this.clearAuthData();
+        return false;
       }
-      
-      // Se for um erro de parsing JSON
-      if (error instanceof SyntaxError) {
-        throw new Error('Resposta inválida do servidor.');
-      }
-      
-      // Propaga o erro original ou uma mensagem amigável
-      throw error.message ? error : new Error('Ocorreu um erro inesperado.');
     }
+
+    return true;
+  }
+
+  private getToken(): string | null {
+    return localStorage.getItem('token');
+  }
+
+  private clearAuthData(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('user');
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      console.log('Tentando fazer login com:', { email: credentials.email, password: '***' });
+      console.log('Tentando fazer login com:', { email: credentials.email });
       
-      const response = await this.request<AuthResponse>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(credentials),
-      });
+      const { data } = await this.api.post<AuthResponse>('/auth/login', credentials);
+      
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        
+        // Salva data de expiração (90 dias)
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 90);
+        localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+        
+        // Salva dados do usuário
+        localStorage.setItem('user', JSON.stringify(data.user));
+      }
 
-      console.log('Resposta do login:', response);
-      return response;
-    } catch (error: any) {
+      console.log('Login bem-sucedido:', data);
+      return data;
+    } catch (error) {
       console.error('Erro durante o login:', error);
       throw error;
     }
@@ -110,50 +119,40 @@ class AuthService {
 
   async getMe(): Promise<User> {
     try {
-      const response = await this.request<{ success: boolean; data: User }>('/auth/me');
-      return response.data;
+      const { data } = await this.api.get<{ success: boolean; data: User }>('/auth/me');
+      return data.data;
     } catch (error) {
-      // Se a sessão for inválida, limpa o localStorage para evitar loops.
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      this.clearAuthData();
       throw error;
     }
   }
 
-  async register(userData: any): Promise<AuthResponse> {
-    return this.request('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(userData)
-    });
-  }
-
-  async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await this.request<{ success: boolean; data: User }>('/auth/updateprofile', {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-    return response.data;
-  }
-
-  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await this.request('/auth/updatepassword', {
-      method: 'PUT',
-      body: JSON.stringify({ currentPassword, newPassword }),
-    });
+  async updateProfile(userData: Partial<User>): Promise<User> {
+    const { data } = await this.api.put<{ success: boolean; data: User }>('/auth/updateprofile', userData);
+    return data.data;
   }
 
   async logout(): Promise<void> {
-    // A rota de logout pode não existir ou não ser necessária se o logout for só no frontend
     try {
-        await this.request('/auth/logout', { method: 'GET' });
+      await this.api.post('/auth/logout');
     } catch (error) {
-        console.warn("Chamada para /auth/logout falhou (isso pode ser esperado).", error);
+      console.warn('Erro ao fazer logout no servidor:', error);
+    } finally {
+      this.clearAuthData();
     }
   }
 
+  async register(userData: any): Promise<AuthResponse> {
+    return this.api.post('/auth/register', userData);
+  }
+
+  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.api.put('/auth/updatepassword', { currentPassword, newPassword });
+  }
+
   async createSuperAdmin(): Promise<User> {
-    const response = await this.request<{ success: boolean, data: User }>('/auth/create-superadmin', { method: 'POST' });
-    return response.data;
+    const { data } = await this.api.post<{ success: boolean; data: User }>('/auth/create-superadmin');
+    return data.data;
   }
 }
 
