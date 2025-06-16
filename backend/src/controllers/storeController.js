@@ -92,10 +92,18 @@ exports.createStore = async (req, res) => {
 
 // Atualizar loja
 exports.updateStore = async (req, res) => {
+  console.log('--- INICIANDO ATUALIZAÇÃO DE LOJA ---');
   try {
-    let store = await Store.findById(req.params.id);
+    const storeId = req.params.id;
+    const updateData = req.body;
+
+    console.log(`[${new Date().toISOString()}] Recebida requisição para atualizar loja ID: ${storeId}`);
+    console.log(`[${new Date().toISOString()}] Dados recebidos no corpo da requisição:`, JSON.stringify(updateData, null, 2));
+
+    let store = await Store.findById(storeId);
 
     if (!store) {
+      console.error(`[${new Date().toISOString()}] ERRO: Loja com ID ${storeId} não encontrada.`);
       return res.status(404).json({
         success: false,
         error: 'Loja não encontrada'
@@ -103,28 +111,40 @@ exports.updateStore = async (req, res) => {
     }
 
     // Verificar permissão
-    if (req.user.role !== 'superadmin' && 
-        req.user.store.toString() !== store._id.toString()) {
+    if (req.user.role !== 'superadmin' && req.user.store.toString() !== store._id.toString()) {
+      console.warn(`[${new Date().toISOString()}] AVISO: Usuário ${req.user.id} sem permissão para atualizar loja ${storeId}.`);
       return res.status(403).json({
         success: false,
         error: 'Não autorizado a atualizar esta loja'
       });
     }
 
-    // Remover campos que não devem ser atualizados
-    delete req.body.createdBy;
-    delete req.body.createdAt;
+    console.log(`[${new Date().toISOString()}] Permissão concedida. Tentando atualizar...`);
 
-    store = await Store.findByIdAndUpdate(req.params.id, req.body, {
+    const updatedStore = await Store.findByIdAndUpdate(storeId, updateData, {
       new: true,
       runValidators: true
     });
 
+    if (!updatedStore) {
+        console.error(`[${new Date().toISOString()}] ERRO: findByIdAndUpdate retornou null. A atualização falhou silenciosamente.`);
+        // Isso pode acontecer se a validação falhar e não for capturada no catch.
+        return res.status(500).json({
+            success: false,
+            error: 'A atualização da loja falhou por um motivo desconhecido.'
+        });
+    }
+
+    console.log(`[${new Date().toISOString()}] SUCESSO: Loja atualizada. Dados após atualização:`, JSON.stringify(updatedStore, null, 2));
+    console.log('--- FIM DA ATUALIZAÇÃO DE LOJA ---');
+
     res.status(200).json({
       success: true,
-      data: store
+      data: updatedStore
     });
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] ERRO CATCH: Ocorreu um erro durante a atualização.`, err);
+    console.log('--- FIM DA ATUALIZAÇÃO DE LOJA (COM ERRO) ---');
     res.status(400).json({
       success: false,
       error: err.message

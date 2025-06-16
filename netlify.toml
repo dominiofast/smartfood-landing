@@ -1,31 +1,32 @@
 [build]
-  command = "npm run build:netlify"
-  functions = "netlify/functions"
+  command = "npm run build"
   publish = "frontend/build"
+  functions = "functions"
 
 [dev]
-  command = "npm start"
+  command = "npm run dev"
   port = 8888
-  publish = "frontend/public"
   targetPort = 3000
-  framework = "create-react-app"
-  functions = "netlify/functions"
+  publish = "frontend/build"
+  autoLaunch = true
 
 [build.environment]
   NODE_VERSION = "18"
-  NPM_FLAGS = "--force --no-audit"
-  NETLIFY_USE_YARN = "false"
+  NPM_VERSION = "9"
+  VITE_API_URL = "https://api.dominiotech.com.br"
 
-# Redirects for SPA
+# API redirects to our single serverless function.
+# Esta regra deve vir antes da regra geral do SPA para ser processada primeiro.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+# Regra geral para Single Page Application (SPA).
+# Deve ser a última regra para capturar todas as outras rotas.
 [[redirects]]
   from = "/*"
   to = "/index.html"
-  status = 200
-
-# API redirects to Netlify Functions
-[[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/:splat"
   status = 200
 
 [functions]
@@ -36,4 +37,13 @@
   DATABASE_URL = "postgresql://user:password@host/database"
   JWT_SECRET = "your-secret-key"
   OPENAI_API_KEY = "your-openai-key"
-  NODE_ENV = "production" 
+  NODE_ENV = "production"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self' https://peppy-narwhal-64ff9e.netlify.app; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions;" 

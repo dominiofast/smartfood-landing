@@ -54,3 +54,4 @@ frontend/.env
 
 # Certificates
 *.pem 
+frontend/src/pages/DigitalMenu.tsx

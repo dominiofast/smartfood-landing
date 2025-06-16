@@ -27,125 +27,65 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    // Tenta carregar o usuário do localStorage na inicialização.
+    // Isso evita o "piscar" da tela de login ao recarregar a página.
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    if (token && userStr) {
+      try {
+        return JSON.parse(userStr);
+      } catch (error) {
+        console.error('Falha ao parsear usuário do localStorage:', error);
+        return null;
+      }
+    }
+    return null;
+  });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   // Função para salvar dados do usuário no localStorage
   const saveUserToStorage = (userData: User) => {
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
-
-  // Função para recuperar dados do usuário do localStorage
-  const getUserFromStorage = (): User | null => {
     try {
-      const userStr = localStorage.getItem('user');
-      return userStr ? JSON.parse(userStr) : null;
+      localStorage.setItem('user', JSON.stringify(userData));
     } catch (error) {
-      console.error('Erro ao recuperar usuário do storage:', error);
-      localStorage.removeItem('user');
-      return null;
+      console.error('Erro ao salvar usuário no storage:', error);
     }
   };
 
-  // Função para verificar se o token ainda é válido (90 dias)
-  const isTokenValid = (): boolean => {
-    try {
-      const token = localStorage.getItem('token');
-      const tokenExpiry = localStorage.getItem('tokenExpiry');
-      
-      if (!token || !tokenExpiry) {
-        console.log('Token ou data de expiração não encontrados');
-        return false;
-      }
-      
-      const expiryDate = new Date(tokenExpiry);
-      const now = new Date();
-      
-      // Adicionar 5 minutos de margem para evitar problemas de sincronização
-      const isValid = now.getTime() < (expiryDate.getTime() + (5 * 60 * 1000));
-      
-      console.log('Verificação de token:', {
-        tokenExists: !!token,
-        expiryExists: !!tokenExpiry,
-        expiryDate: expiryDate.toISOString(),
-        now: now.toISOString(),
-        isValid
-      });
-      
-      return isValid;
-    } catch (error) {
-      console.error('Erro ao verificar validade do token:', error);
-      return false;
-    }
-  };
-
-  const loadUser = useCallback(async () => {
-    try {
-      const token = localStorage.getItem('token');
-      console.log('Token encontrado:', token ? 'Sim' : 'Não');
-      
-      if (token && isTokenValid()) {
-        // Primeiro, tenta carregar o usuário do storage local como fallback
-        const cachedUser = getUserFromStorage();
-        if (cachedUser) {
-          console.log('Usuário encontrado no cache local:', cachedUser);
-          setUser(cachedUser);
-        }
-        
-        // Depois tenta atualizar com dados do servidor
-        try {
-          console.log('Tentando carregar dados atualizados do usuário...');
-          const userData = await authService.getMe();
-          console.log('Dados do usuário carregados do servidor:', userData);
-          setUser(userData);
-          saveUserToStorage(userData); // Atualiza o cache
-        } catch (serverError: any) {
-          console.error('Erro ao carregar do servidor:', serverError);
-          
-          // Se falhou no servidor mas temos cache, usa o cache
-          if (cachedUser) {
-            console.log('Usando dados do cache devido ao erro do servidor');
-            // Verifica apenas se o erro é relacionado ao token
-            if (serverError.message?.includes('Token inválido') || serverError.message?.includes('401')) {
-              console.log('Token inválido, removendo tudo do localStorage');
-              localStorage.removeItem('token');
-              localStorage.removeItem('tokenExpiry');
-              localStorage.removeItem('user');
-              setUser(null);
-            }
-          } else {
-            // Sem cache e sem servidor, remove tudo
-            console.log('Sem cache e erro no servidor, removendo token');
-            localStorage.removeItem('token');
-            localStorage.removeItem('tokenExpiry');
-            localStorage.removeItem('user');
-            setUser(null);
-          }
-        }
-      } else {
-        console.log('Nenhum token válido encontrado');
-        // Remove dados antigos se não há token válido
-        localStorage.removeItem('token');
-        localStorage.removeItem('tokenExpiry');
-        localStorage.removeItem('user');
-        setUser(null);
-      }
-    } catch (error: any) {
-      console.error('Erro geral ao carregar usuário:', error);
-      // Em caso de erro geral, limpa tudo
-      localStorage.removeItem('token');
-      localStorage.removeItem('tokenExpiry');
-      localStorage.removeItem('user');
-      setUser(null);
-    } finally {
-      setLoading(false);
-    }
-  }, []); // useCallback
-
+  // Efeito para verificar o token e carregar/validar dados do usuário na inicialização.
   useEffect(() => {
-    loadUser();
-  }, [loadUser]);
+    const validateUserSession = async () => {
+      const token = localStorage.getItem('token');
+
+      if (!token) {
+        setLoading(false);
+        // Se já não estiver na página de login, redireciona
+        if (window.location.pathname !== '/login') {
+            // navigate('/login'); // Opcional: descomente para forçar redirect
+        }
+        return;
+      }
+
+      try {
+        // Tenta buscar os dados mais recentes do usuário.
+        // O interceptador da API (se houver) ou a rota protegida
+        // devem lidar com um token inválido e deslogar.
+        const freshUserData = await authService.getMe();
+        setUser(freshUserData);
+        saveUserToStorage(freshUserData);
+      } catch (error: any) {
+        // Se a busca falhar (ex: token expirado), desloga o usuário.
+        console.error('Falha ao validar sessão, deslogando:', error);
+        logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    validateUserSession();
+  }, []);
 
   const login = async (credentials: LoginCredentials) => {
     try {

@@ -1,135 +1,161 @@
-import api from '../api/axios';
+import axios, { AxiosInstance } from 'axios';
 import { User, LoginCredentials, AuthResponse } from '../types';
 
+// Define a URL base da API usando a variável de ambiente do Vite ou o domínio do Netlify
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions'
+  : 'http://localhost:8888/.netlify/functions';
+
 class AuthService {
-  // Função para verificar se há token válido
-  isAuthenticated(): boolean {
-    const token = localStorage.getItem('token');
-    return !!token;
+  private api: AxiosInstance;
+
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 10000, // 10 segundos
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      withCredentials: true, // Importante para cookies de sessão
+    });
+
+    // Interceptor para adicionar o token em todas as requisições
+    this.api.interceptors.request.use(
+      (config) => {
+        const token = this.getToken();
+        if (token && config.headers) {
+          config.headers['Authorization'] = `Bearer ${token}`;
+        }
+        console.log('Fazendo requisição para:', config.url);
+        return config;
+      },
+      (error) => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Interceptor para tratar erros de resposta
+    this.api.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        console.error('Erro na requisição:', error);
+
+        if (!error.response) {
+          // Erro de rede ou timeout
+          throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão de internet e tente novamente.');
+        }
+
+        const { status, data } = error.response;
+
+        switch (status) {
+          case 401:
+            // Limpa dados de autenticação e redireciona para login
+            this.clearAuthData();
+            throw new Error('Sessão expirada. Por favor, faça login novamente.');
+          case 403:
+            throw new Error('Acesso negado. Você não tem permissão para acessar este recurso.');
+          case 404:
+            throw new Error('Recurso não encontrado.');
+          case 500:
+            throw new Error('Erro interno do servidor. Por favor, tente novamente mais tarde.');
+          default:
+            throw new Error(data?.message || `Erro ${status}: Ocorreu um problema inesperado.`);
+        }
+      }
+    );
   }
 
-  // Função para obter o token
-  getToken(): string | null {
+  // Função para verificar se há token válido
+  isAuthenticated(): boolean {
+    const token = this.getToken();
+    if (!token) return false;
+
+    // Verifica se o token está expirado
+    const tokenExpiry = localStorage.getItem('tokenExpiry');
+    if (tokenExpiry) {
+      const expiryDate = new Date(tokenExpiry);
+      if (expiryDate < new Date()) {
+        this.clearAuthData();
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private getToken(): string | null {
     return localStorage.getItem('token');
+  }
+
+  private clearAuthData(): void {
+    localStorage.removeItem('token');
+    localStorage.removeItem('tokenExpiry');
+    localStorage.removeItem('user');
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      // Verificar se estamos usando Netlify Dev (porta 8888) ou desenvolvimento puro (porta 3000)
-      const isNetlifyDev = window.location.port === '8888';
-      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+      console.log('Tentando fazer login com:', { email: credentials.email });
       
-      const endpoint = (isNetlifyDev || isProduction)
-        ? '/.netlify/functions/auth-login' 
-        : '/auth/login';
+      const { data } = await this.api.post<AuthResponse>('/.netlify/functions/auth/login', credentials);
       
-      console.log('Fazendo login em:', endpoint);
-      console.log('Dados enviados:', credentials);
-      console.log('Porta atual:', window.location.port);
-      console.log('Hostname atual:', window.location.hostname);
-      
-      // Fazer a requisição diretamente para garantir que recebemos a resposta correta
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(credentials)
-      });
-      
-      console.log('Status da resposta:', response.status);
-      console.log('Headers da resposta:', response.headers);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
+      if (data.token) {
+        localStorage.setItem('token', data.token);
+        
+        // Salva data de expiração (90 dias)
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 90);
+        localStorage.setItem('tokenExpiry', expiryDate.toISOString());
+        
+        // Salva dados do usuário
+        localStorage.setItem('user', JSON.stringify(data.user));
       }
-      
-      const data = await response.json();
-      console.log('Resposta do login:', data);
-      
+
+      console.log('Login bem-sucedido:', data);
       return data;
     } catch (error) {
-      console.error('Erro no serviço de login:', error);
+      console.error('Erro durante o login:', error);
       throw error;
     }
-  }
-
-  async register(userData: {
-    name: string;
-    email: string;
-    password: string;
-    role?: string;
-    storeId?: string;
-  }): Promise<AuthResponse> {
-    const response = await api.post<AuthResponse>('/auth/register', userData);
-    return response.data;
   }
 
   async getMe(): Promise<User> {
     try {
-      // Verificar se estamos usando Netlify Dev (porta 8888) ou desenvolvimento puro (porta 3000)
-      const isNetlifyDev = window.location.port === '8888';
-      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      
-      const endpoint = (isNetlifyDev || isProduction)
-        ? '/.netlify/functions/auth-me' 
-        : '/auth/me';
-      
-      console.log('Fazendo getMe em:', endpoint);
-      
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Token não encontrado');
-      }
-      
-      const response = await fetch(endpoint, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          localStorage.removeItem('token');
-          throw new Error('Token inválido ou expirado');
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Erro ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      console.log('Resposta do getMe:', data);
-      
-      // Retornar o user dependendo da estrutura da resposta
-      return data.data || data.user || data;
+      const { data } = await this.api.get<{ success: boolean; data: User }>('/auth/me');
+      return data.data;
     } catch (error) {
-      console.error('Erro no getMe:', error);
+      this.clearAuthData();
       throw error;
     }
   }
 
-  async updateProfile(data: Partial<User>): Promise<User> {
-    const response = await api.put<{ success: boolean; data: User }>('/auth/updateprofile', data);
-    return response.data.data;
-  }
-
-  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
-    await api.put('/auth/updatepassword', {
-      currentPassword,
-      newPassword,
-    });
+  async updateProfile(userData: Partial<User>): Promise<User> {
+    const { data } = await this.api.put<{ success: boolean; data: User }>('/auth/updateprofile', userData);
+    return data.data;
   }
 
   async logout(): Promise<void> {
-    await api.get('/auth/logout');
+    try {
+      await this.api.post('/auth/logout');
+    } catch (error) {
+      console.warn('Erro ao fazer logout no servidor:', error);
+    } finally {
+      this.clearAuthData();
+    }
+  }
+
+  async register(userData: any): Promise<AuthResponse> {
+    return this.api.post('/auth/register', userData);
+  }
+
+  async updatePassword(currentPassword: string, newPassword: string): Promise<void> {
+    await this.api.put('/auth/updatepassword', { currentPassword, newPassword });
   }
 
   async createSuperAdmin(): Promise<User> {
-    const response = await api.post<{ success: boolean; data: User }>('/auth/create-superadmin');
-    return response.data.data;
+    const { data } = await this.api.post<{ success: boolean; data: User }>('/auth/create-superadmin');
+    return data.data;
   }
 }
 

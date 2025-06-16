@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { LoginCredentials } from '../types';
 import { EyeIcon, EyeSlashIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import { SparklesIcon, ChartBarIcon, CpuChipIcon, ShieldCheckIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/solid';
+import { toast } from 'react-hot-toast';
 
 const schema = yup.object({
   email: yup.string().email('Email inválido').required('Email é obrigatório'),
@@ -30,8 +31,12 @@ export default function Login() {
     try {
       setIsLoading(true);
       await login(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
+      toast.error(
+        error.message || 
+        'Não foi possível fazer login. Por favor, verifique suas credenciais e tente novamente.'
+      );
     } finally {
       setIsLoading(false);
     }

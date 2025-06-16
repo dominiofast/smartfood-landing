@@ -1,13 +1,17 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const path = require('path');
 const morgan = require('morgan');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/database');
 
-// Carregar variáveis de ambiente do diretório atual
-dotenv.config();
+// Carregar variáveis de ambiente. Em produção (Netlify), elas são injetadas diretamente.
+// Em desenvolvimento, carrega do arquivo .env na raiz do projeto.
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+}
 
 // Conectar ao banco de dados
 connectDB();
@@ -98,17 +102,21 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Lidar com promise rejections não tratadas
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Erro: ${err.message}`);
-  // Fechar servidor e sair do processo
-  server.close(() => process.exit(1));
-});
-
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
-  console.log(`Servidor rodando em modo ${process.env.NODE_ENV} na porta ${PORT}`);
-});
+// Em um ambiente serverless, o app.listen não é necessário,
+// pois o provedor (Netlify) gerencia o ciclo de vida do servidor.
+// Só executamos o listen em ambiente de desenvolvimento.
+if (process.env.NODE_ENV !== 'production') {
+  const server = app.listen(PORT, () => {
+    console.log(`Servidor rodando em modo ${process.env.NODE_ENV} na porta ${PORT}`);
+  });
+
+  // Lidar com promise rejections não tratadas
+  process.on('unhandledRejection', (err, promise) => {
+    console.log(`Erro no servidor: ${err.message}`);
+    server.close(() => process.exit(1));
+  });
+}
 
 module.exports = app; 
