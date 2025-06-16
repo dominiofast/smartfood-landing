@@ -321,203 +321,36 @@ export default function StoreManagement() {
     }
   };
 
-  // Abrir modal de edição
-  const handleEdit = (store: SimpleStore) => {
-    console.log('Iniciando edição da loja:', {
-      storeId: store.id,
-      storeName: store.name,
-      currentUser: user,
-      storeData: store,
-      whatsappApi: store.whatsappApi
-    });
-
-    // Extrair dados do endereço do formato string, se necessário
-    let addressData = {
-      street: '',
-      number: '',
-      complement: '',
-      neighborhood: '',
-      city: '',
-      state: '',
-      zipCode: ''
-    };
-
-    // Garantir que temos dados da WhatsApp API
-    const whatsappApiData = {
-      controlId: store.whatsappApi?.controlId || undefined,
-      host: store.whatsappApi?.host || undefined,
-      instanceKey: store.whatsappApi?.instanceKey || undefined,
-      token: store.whatsappApi?.token || undefined,
-      webhook: store.whatsappApi?.webhook || undefined
-    };
-
-    console.log('Dados da WhatsApp API:', whatsappApiData);
-
-    try {
-      // Se o endereço está em formato JSON string, fazer o parse
-      if (store.address && typeof store.address === 'string' && store.address.startsWith('{')) {
-        console.log('Tentando parsear endereço JSON:', store.address);
-        const parsedAddress = JSON.parse(store.address);
-        addressData = {
-          street: parsedAddress.street || '',
-          number: parsedAddress.number || '',
-          complement: parsedAddress.complement || '',
-          neighborhood: parsedAddress.neighborhood || '',
-          city: parsedAddress.city || '',
-          state: parsedAddress.state || '',
-          zipCode: parsedAddress.zipCode || ''
-        };
-        console.log('Endereço parseado com sucesso:', addressData);
-      } else {
-        // Usar campos individuais do endereço
-        addressData = {
-          street: store.address_street || store.address || '',
-          number: store.address_number || '',
-          complement: store.address_complement || '',
-          neighborhood: store.address_neighborhood || '',
-          city: store.address_city || store.city || '',
-          state: store.address_state || store.state || '',
-          zipCode: store.address_zip_code || store.zip_code || ''
-        };
-        console.log('Usando campos individuais do endereço:', addressData);
-      }
-    } catch (error) {
-      console.error('Erro ao processar endereço:', error, {
-        address: store.address,
-        addressType: typeof store.address
-      });
-      // Em caso de erro, tentar extrair informações do endereço string
-      if (store.address && typeof store.address === 'string') {
-        const addressParts = store.address.split(',').map(part => part.trim());
-        addressData = {
-          street: addressParts[0] || '',
-          number: addressParts[1] || '',
-          complement: addressParts[2] || '',
-          neighborhood: addressParts[3] || '',
-          city: store.city || addressParts[4] || '',
-          state: store.state || addressParts[5] || '',
-          zipCode: store.zip_code || ''
-        };
-        console.log('Endereço extraído de string:', addressData);
-      } else {
-        // Usar campos individuais como fallback
-        addressData = {
-          street: store.address_street || store.address || '',
-          number: store.address_number || '',
-          complement: store.address_complement || '',
-          neighborhood: store.address_neighborhood || '',
-          city: store.address_city || store.city || '',
-          state: store.address_state || store.state || '',
-          zipCode: store.address_zip_code || store.zip_code || ''
-        };
-        console.log('Usando campos individuais como fallback:', addressData);
-      }
-    }
-
-    setSelectedStore(store);
-    
-    // Definir valores básicos
-    setValueEdit('name', store.name);
-    setValueEdit('description', store.description || '');
-    
-    // Definir valores de contato
-    setValueEdit('contact.phone', store.contact_phone || store.phone || '');
-    setValueEdit('contact.email', store.contact_email || store.email || '');
-    setValueEdit('contact.whatsapp', store.contact?.whatsapp || '');
-    
-    // Definir valores do endereço
-    setValueEdit('address.street', addressData.street);
-    setValueEdit('address.number', addressData.number);
-    setValueEdit('address.complement', addressData.complement);
-    setValueEdit('address.neighborhood', addressData.neighborhood);
-    setValueEdit('address.city', addressData.city);
-    setValueEdit('address.state', addressData.state);
-    setValueEdit('address.zipCode', addressData.zipCode);
-
-    // Configurações do WhatsApp - usar os dados processados
-    setValueEdit('whatsappApi.controlId', whatsappApiData.controlId);
-    setValueEdit('whatsappApi.host', whatsappApiData.host);
-    setValueEdit('whatsappApi.instanceKey', whatsappApiData.instanceKey);
-    setValueEdit('whatsappApi.token', whatsappApiData.token);
-    setValueEdit('whatsappApi.webhook', whatsappApiData.webhook);
-
-    console.log('Valores definidos no formulário de edição:', {
-      name: store.name,
-      description: store.description,
-      address: addressData,
-      contact: {
-        phone: store.contact_phone || store.phone,
-        email: store.contact_email || store.email,
-        whatsapp: store.contact?.whatsapp
-      },
-      whatsappApi: whatsappApiData
-    });
-    
-    setIsEditModalOpen(true);
-  };
-
   // Atualizar loja
   const onSubmitEdit = async (data: EditStoreFormData) => {
-    if (!selectedStore) return;
+    if (!selectedStore) {
+      toast.error('Nenhuma loja selecionada para edição.');
+      return;
+    }
+
+    const toastId = toast.loading('Atualizando loja...');
     
     try {
-      console.log('Atualizando loja:', {
-        storeId: selectedStore.id,
-        formData: data
-      });
-      
-      const isNetlifyDev = window.location.port === '8888';
-      const isProduction = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-      const endpoint = (isNetlifyDev || isProduction) 
-        ? `/.netlify/functions/stores-crud/${selectedStore.id}` 
-        : `/api/stores/${selectedStore.id}`;
-      
-      // Preparar dados para envio
+      const endpoint = window.location.hostname.includes('localhost')
+        ? `/api/stores/${selectedStore.id}`
+        : `/.netlify/functions/stores-crud/${selectedStore.id}`;
+
+      // O objeto 'data' do react-hook-form já tem a estrutura aninhada correta
+      // que o schema do Mongoose no backend espera.
+      // Apenas garantimos que campos vazios do whatsappApi sejam undefined.
       const updateData = {
         ...data,
-        id: selectedStore.id,
-        // Manter campos legados para compatibilidade
-        phone: data.contact.phone,
-        email: data.contact.email,
-        address: `${data.address.street}, ${data.address.number || 'S/N'}${data.address.complement ? ` - ${data.address.complement}` : ''}, ${data.address.neighborhood}`,
-        city: data.address.city,
-        state: data.address.state,
-        zip_code: data.address.zipCode,
-        // Campos novos
-        contact_phone: data.contact.phone,
-        contact_email: data.contact.email,
-        address_street: data.address.street,
-        address_number: data.address.number,
-        address_complement: data.address.complement,
-        address_neighborhood: data.address.neighborhood,
-        address_city: data.address.city,
-        address_state: data.address.state,
-        address_zip_code: data.address.zipCode,
-        // WhatsApp API - garantir que os campos vazios sejam undefined
         whatsappApi: {
-          controlId: data.whatsappApi.controlId?.trim() || undefined,
-          host: data.whatsappApi.host?.trim() || undefined,
-          instanceKey: data.whatsappApi.instanceKey?.trim() || undefined,
-          token: data.whatsappApi.token?.trim() || undefined,
-          webhook: data.whatsappApi.webhook?.trim() || undefined
+          controlId: data.whatsappApi?.controlId?.trim() || undefined,
+          host: data.whatsappApi?.host?.trim() || undefined,
+          instanceKey: data.whatsappApi?.instanceKey?.trim() || undefined,
+          token: data.whatsappApi?.token?.trim() || undefined,
+          webhook: data.whatsappApi?.webhook?.trim() || undefined
         }
       };
-
-      // Preservar dados existentes do WhatsApp API se nenhum campo foi alterado
-      if (selectedStore.whatsappApi && 
-          Object.values(updateData.whatsappApi).every(value => value === undefined)) {
-        console.log('Mantendo dados existentes do WhatsApp API:', selectedStore.whatsappApi);
-        updateData.whatsappApi = {
-          controlId: selectedStore.whatsappApi.controlId || undefined,
-          host: selectedStore.whatsappApi.host || undefined,
-          instanceKey: selectedStore.whatsappApi.instanceKey || undefined,
-          token: selectedStore.whatsappApi.token || undefined,
-          webhook: selectedStore.whatsappApi.webhook || undefined
-        };
-      }
-
-      console.log('Dados preparados para envio:', updateData);
       
+      console.log('Enviando dados para atualização:', { endpoint, body: updateData });
+
       const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
@@ -526,46 +359,21 @@ export default function StoreManagement() {
         },
         body: JSON.stringify(updateData)
       });
+      
+      const result = await response.json();
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Erro na resposta do servidor:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData
-        });
-        throw new Error(errorData.error || errorData.message || 'Erro ao atualizar loja');
+        console.error('Erro ao atualizar loja:', { status: response.status, result });
+        throw new Error(result.error || result.message || 'Erro ao atualizar loja');
       }
 
-      const result = await response.json();
-      console.log('Resposta do servidor após atualização:', result);
-      
-      // Atualizar a loja no estado local antes de recarregar
-      const updatedStore = {
-        ...selectedStore,
-        ...updateData,
-        whatsappApi: updateData.whatsappApi
-      };
-      
-      setStores(prevStores => 
-        prevStores.map((store: SimpleStore) => 
-          store.id === selectedStore.id ? updatedStore : store
-        )
-      );
-      
-      toast.success('Loja atualizada com sucesso!');
+      toast.success('Loja atualizada com sucesso!', { id: toastId });
       setIsEditModalOpen(false);
-      resetEdit();
-      setSelectedStore(null);
-      
-      // Recarregar os dados da loja em segundo plano
-      loadStores().catch(error => {
-        console.error('Erro ao recarregar lojas:', error);
-        // Se falhar ao recarregar, pelo menos os dados locais já foram atualizados
-      });
+      await loadStores(); // Recarregar lojas para ver a atualização
+
     } catch (error: any) {
-      console.error('Erro ao atualizar loja:', error);
-      toast.error(error.message || 'Erro ao atualizar loja');
+      console.error('Falha na submissão da edição:', error);
+      toast.error(error.message || 'Falha ao atualizar a loja', { id: toastId });
     }
   };
 
