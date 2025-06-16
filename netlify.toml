@@ -1,6 +1,6 @@
 [build]
+  base = "/"
   command = "npm run build:netlify"
-  functions = "netlify/functions"
   publish = "frontend/build"
 
 [dev]
@@ -13,6 +13,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  NPM_VERSION = "9"
   NPM_FLAGS = "--force --no-audit"
   NETLIFY_USE_YARN = "false"
 
