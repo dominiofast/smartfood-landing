@@ -7,6 +7,9 @@ export default defineConfig(({ mode }) => {
   // Carrega as variáveis de ambiente baseado no modo (development/production)
   const env = loadEnv(mode, process.cwd(), '');
   
+  const apiUrl = env.VITE_API_URL || 'http://localhost:3000';
+  console.log('API URL:', apiUrl);
+  
   return {
     plugins: [react()],
     root: '.',
@@ -20,7 +23,7 @@ export default defineConfig(({ mode }) => {
       port: 3000,
       proxy: {
         '/api': {
-          target: env.VITE_API_URL || 'http://localhost:3000',
+          target: apiUrl,
           changeOrigin: true,
           secure: false,
           ws: true,
@@ -38,6 +41,13 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
+      cors: true,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        'Access-Control-Allow-Headers': 'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+      },
     },
     build: {
       outDir: 'build',
@@ -46,10 +56,13 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         output: {
           manualChunks: {
-            vendor: ['react', 'react-dom', 'react-router-dom'],
+            vendor: ['react', 'react-dom', 'react-router-dom', 'axios'],
           },
         },
       },
+    },
+    define: {
+      'process.env': env,
     },
   };
 }); 
