@@ -4,90 +4,71 @@ const User = require('../models/User');
 // Proteger rotas
 exports.protect = async (req, res, next) => {
   let token;
-  console.log('--- INICIANDO MIDDLEWARE PROTECT ---');
-  console.log('Verificando cabeçalho de autorização...');
+  console.log('--- [AUTH] Iniciando verificação de proteção ---');
 
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith('Bearer')
-  ) {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
     token = req.headers.authorization.split(' ')[1];
-    console.log('Token encontrado no cabeçalho.');
+    console.log('--- [AUTH] Token encontrado no cabeçalho.');
   }
 
   if (!token) {
-    console.error('ERRO: Token não encontrado na requisição.');
-    console.log('--- FIM DO MIDDLEWARE PROTECT (ERRO) ---');
-    return res.status(401).json({
-      success: false,
-      error: 'Não autorizado para acessar esta rota'
-    });
+    console.error('--- [AUTH] FALHA: Nenhum token encontrado na requisição.');
+    return res.status(401).json({ success: false, error: 'Acesso não autorizado, token não fornecido.' });
   }
 
   try {
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      console.error('ERRO: Variável de ambiente JWT_SECRET não está definida.');
-      console.log('--- FIM DO MIDDLEWARE PROTECT (ERRO) ---');
-      return res.status(500).json({ success: false, error: 'Erro de configuração do servidor' });
+      console.error('--- [AUTH] FALHA CRÍTICA: Variável de ambiente JWT_SECRET não definida no servidor.');
+      return res.status(500).json({ success: false, error: 'Erro de configuração do servidor.' });
     }
-    console.log('JWT_SECRET carregado com sucesso.');
 
-    // Verificar token
+    // Verificar e decodificar token
     const decoded = jwt.verify(token, jwtSecret);
-    console.log('Token decodificado com sucesso:', decoded);
+    console.log(`--- [AUTH] Token decodificado para o ID de usuário: ${decoded.id}`);
 
-    req.user = await User.findById(decoded.id).select('-password');
+    // Encontrar usuário no banco de dados
+    const user = await User.findById(decoded.id).select('-password');
 
-    if (!req.user) {
-      console.error(`ERRO: Usuário com ID ${decoded.id} não encontrado no banco de dados.`);
-      console.log('--- FIM DO MIDDLEWARE PROTECT (ERRO) ---');
-      return res.status(401).json({
-        success: false,
-        error: 'Não autorizado para acessar esta rota'
-      });
-    }
-    
-    console.log(`Usuário ${req.user.email} encontrado e autenticado com sucesso.`);
-
-    if (!req.user.isActive) {
-      return res.status(401).json({
-        success: false,
-        error: 'Usuário inativo'
-      });
+    if (!user) {
+      console.error(`--- [AUTH] FALHA: Token válido, mas usuário com ID ${decoded.id} não foi encontrado no banco de dados.`);
+      return res.status(401).json({ success: false, error: 'Acesso não autorizado, usuário não encontrado.' });
     }
 
-    console.log('--- FIM DO MIDDLEWARE PROTECT (SUCESSO) ---');
+    if (!user.isActive) {
+      console.warn(`--- [AUTH] FALHA: Usuário ${user.email} está inativo.`);
+      return res.status(403).json({ success: false, error: 'Sua conta está inativa.' });
+    }
+
+    console.log(`--- [AUTH] SUCESSO: Usuário ${user.email} autenticado.`);
+    req.user = user;
     next();
+    
   } catch (err) {
-    console.error('ERRO: Falha na verificação do token (token inválido ou expirado).', err.message);
-    console.log('--- FIM DO MIDDLEWARE PROTECT (ERRO) ---');
-    return res.status(401).json({
-      success: false,
-      error: 'Não autorizado para acessar esta rota'
-    });
+    console.error('--- [AUTH] FALHA: Erro ao verificar o token (pode estar expirado ou ser inválido).', err.message);
+    return res.status(401).json({ success: false, error: 'Acesso não autorizado, token inválido ou expirado.' });
   }
 };
 
-// Verificar roles
+// Conceder acesso a roles específicas
 exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) {
       return res.status(403).json({
         success: false,
-        error: `Usuário com role ${req.user.role} não está autorizado para acessar esta rota`
+        error: `A role '${req.user.role}' não tem permissão para acessar esta rota`
       });
     }
     next();
   };
 };
 
-// Verificar se é superadmin
+// Middleware para verificar se é SuperAdmin
 exports.isSuperAdmin = (req, res, next) => {
   if (req.user.role !== 'superadmin') {
     return res.status(403).json({
       success: false,
-      error: 'Apenas superadmins podem acessar esta rota'
+      error: 'Acesso negado. Apenas superadmins podem realizar esta ação.'
     });
   }
   next();
