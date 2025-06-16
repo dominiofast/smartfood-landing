@@ -7,7 +7,12 @@ export default defineConfig(({ mode }) => {
   // Carrega as variáveis de ambiente baseado no modo (development/production)
   const env = loadEnv(mode, process.cwd(), '');
   
-  const apiUrl = env.VITE_API_URL || 'http://localhost:3000';
+  // Em desenvolvimento, usa localhost, em produção usa a URL do Netlify
+  const apiUrl = mode === 'production' 
+    ? 'https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions'
+    : 'http://localhost:3000';
+  
+  console.log('Mode:', mode);
   console.log('API URL:', apiUrl);
   
   return {
@@ -25,7 +30,7 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiUrl,
           changeOrigin: true,
-          secure: false,
+          secure: mode === 'production',
           ws: true,
           rewrite: (path) => path.replace(/^\/api/, ''),
           configure: (proxy, _options) => {
@@ -62,7 +67,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      'process.env': env,
+      'process.env': {
+        ...env,
+        VITE_APP_URL: mode === 'production' 
+          ? 'https://peppy-narwhal-64ff9e.netlify.app'
+          : 'http://localhost:3000'
+      },
     },
   };
 }); 

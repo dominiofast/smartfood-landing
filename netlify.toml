@@ -1,15 +1,14 @@
 [build]
-  base = "/"
-  command = "npm run build:netlify"
+  command = "npm run build"
   publish = "frontend/build"
+  functions = "functions"
 
 [dev]
-  command = "npm start"
-  port = 8888
-  publish = "frontend/public"
+  command = "npm run dev"
+  port = 3000
   targetPort = 3000
-  framework = "create-react-app"
-  functions = "netlify/functions"
+  publish = "frontend/build"
+  autoLaunch = true
 
 [build.environment]
   NODE_VERSION = "18"
@@ -47,4 +46,4 @@
     X-XSS-Protection = "1; mode=block"
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://api.dominiotech.com.br; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';" 
+    Content-Security-Policy = "default-src 'self' https://peppy-narwhal-64ff9e.netlify.app; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions;" 

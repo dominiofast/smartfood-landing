@@ -1,8 +1,10 @@
 import axios, { AxiosInstance } from 'axios';
 import { User, LoginCredentials, AuthResponse } from '../types';
 
-// Define a URL base da API usando a variável de ambiente do Vite
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Define a URL base da API usando a variável de ambiente do Vite ou o domínio do Netlify
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://peppy-narwhal-64ff9e.netlify.app/.netlify/functions'
+  : 'http://localhost:3000/api';
 
 class AuthService {
   private api: AxiosInstance;
@@ -25,6 +27,7 @@ class AuthService {
         if (token && config.headers) {
           config.headers['Authorization'] = `Bearer ${token}`;
         }
+        console.log('Fazendo requisição para:', config.url);
         return config;
       },
       (error) => {
