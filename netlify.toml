@@ -14,8 +14,7 @@
 [build.environment]
   NODE_VERSION = "18"
   NPM_VERSION = "9"
-  NPM_FLAGS = "--force --no-audit"
-  NETLIFY_USE_YARN = "false"
+  VITE_API_URL = "https://api.dominiotech.com.br"
 
 # API redirects to our single serverless function.
 # Esta regra deve vir antes da regra geral do SPA para ser processada primeiro.
@@ -39,4 +38,13 @@
   DATABASE_URL = "postgresql://user:password@host/database"
   JWT_SECRET = "your-secret-key"
   OPENAI_API_KEY = "your-openai-key"
-  NODE_ENV = "production" 
+  NODE_ENV = "production"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://api.dominiotech.com.br; img-src 'self' data: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';" 
