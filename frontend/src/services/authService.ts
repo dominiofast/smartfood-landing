@@ -1,6 +1,6 @@
 import { User, LoginCredentials, AuthResponse } from '../types';
 
-// Define a URL base da API usando a variável de ambiente
+// Define a URL base da API usando a variável de ambiente do Vite
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 class AuthService {
@@ -20,6 +20,7 @@ class AuthService {
 
     const headers: { [key: string]: string } = {
       'Content-Type': 'application/json',
+      'Accept': 'application/json',
     };
 
     if (token) {
@@ -27,38 +28,84 @@ class AuthService {
     }
 
     try {
-      const response = await fetch(url, { ...options, headers });
+      console.log(`Fazendo requisição para: ${url}`);
       
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        credentials: 'include', // Importante para cookies de sessão
+      });
+      
+      // Log da resposta para debug
+      console.log(`Status da resposta: ${response.status}`);
+      console.log(`Headers da resposta:`, Object.fromEntries(response.headers.entries()));
+
+      // Verifica se a resposta é um erro de rede
+      if (!response.ok) {
+        // Tenta ler o corpo da resposta
+        let errorData;
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { message: 'Erro desconhecido no servidor' };
+        }
+
+        // Tratamento específico por status
+        switch (response.status) {
+          case 401:
+            throw new Error('Não autorizado. Por favor, faça login novamente.');
+          case 403:
+            throw new Error('Acesso negado. Você não tem permissão para acessar este recurso.');
+          case 404:
+            throw new Error('Recurso não encontrado.');
+          case 500:
+            throw new Error('Erro interno do servidor. Por favor, tente novamente mais tarde.');
+          default:
+            throw new Error(errorData.message || `Erro ${response.status}: ${response.statusText}`);
+        }
+      }
+
       // Verifica o Content-Type da resposta
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        throw new Error('Servidor retornou uma resposta inválida. Por favor, tente novamente.');
+        throw new Error('Resposta inválida do servidor. Esperava JSON.');
       }
 
       const data = await response.json();
-
-      if (!response.ok) {
-        // Se o servidor retornou um erro em formato JSON
-        throw new Error(data.error || data.message || 'Ocorreu um erro na requisição.');
-      }
       return data;
     } catch (error: any) {
       console.error(`Erro na requisição para ${url}:`, error);
       
-      // Se o erro for de parsing JSON, significa que recebemos HTML ou outro formato
-      if (error instanceof SyntaxError) {
-        throw new Error('Não foi possível conectar ao servidor. Por favor, verifique sua conexão.');
+      // Se for um erro de rede (sem conexão)
+      if (error instanceof TypeError && error.message === 'Failed to fetch') {
+        throw new Error('Não foi possível conectar ao servidor. Verifique sua conexão de internet.');
       }
       
-      throw error;
+      // Se for um erro de parsing JSON
+      if (error instanceof SyntaxError) {
+        throw new Error('Resposta inválida do servidor.');
+      }
+      
+      // Propaga o erro original ou uma mensagem amigável
+      throw error.message ? error : new Error('Ocorreu um erro inesperado.');
     }
   }
 
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return this.request('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify(credentials),
-    });
+    try {
+      console.log('Tentando fazer login com:', { email: credentials.email, password: '***' });
+      
+      const response = await this.request<AuthResponse>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify(credentials),
+      });
+
+      console.log('Resposta do login:', response);
+      return response;
+    } catch (error: any) {
+      console.error('Erro durante o login:', error);
+      throw error;
+    }
   }
 
   async getMe(): Promise<User> {
