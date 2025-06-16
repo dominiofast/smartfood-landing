@@ -111,57 +111,13 @@ export default function StoreManagement() {
 
   // Verificar se o usuário pode editar a loja
   const canEditStore = (store: SimpleStore): boolean => {
-    // Log inicial para debug
-    console.log('Verificando permissões de edição:', {
-      userExists: !!user,
-      userRole: user?.role,
-      storeExists: !!store,
-      storeId: store?.id,
-      storeName: store?.name,
-      storeData: store
-    });
-
-    // Se não há usuário ou store, não pode editar
-    if (!user || !store) {
-      console.log('Sem permissão: usuário ou loja não encontrados', { user, store });
+    if (!user) {
       return false;
     }
-
-    // Superadmin pode editar qualquer loja
-    if (user.role === 'superadmin') {
-      console.log('Permissão concedida: usuário é superadmin', {
-        userId: user.id,
-        userRole: user.role,
-        storeId: store.id,
-        storeName: store.name
-      });
+    // Superadmin e Manager sempre podem ver o botão de gerenciar.
+    if (user.role === 'superadmin' || user.role === 'manager') {
       return true;
     }
-
-    // Manager só pode editar sua própria loja
-    if (user.role === 'manager') {
-      const userStoreId = user.store?.id;
-      const storeId = store.id;
-      const hasPermission = !!(user.store && userStoreId === storeId);
-      
-      console.log('Verificando permissão para manager:', {
-        userStoreId,
-        storeId,
-        hasPermission,
-        userStore: user.store,
-        storeFromList: store,
-        typesMatch: typeof userStoreId === typeof storeId,
-        valuesMatch: userStoreId == storeId
-      });
-      
-      return hasPermission;
-    }
-
-    console.log('Sem permissão: role não autorizada', { 
-      userRole: user.role,
-      userId: user.id,
-      storeId: store.id
-    });
     return false;
   };
 
@@ -642,12 +598,14 @@ export default function StoreManagement() {
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     {(() => {
                       const canEdit = canEditStore(store);
-                      console.log('Renderizando botões de ação:', {
-                        storeName: store.name,
+                      // Log para depuração final
+                      console.log('Dados para renderizar Ações:', {
                         storeId: store.id,
-                        canEdit,
-                        isSuperAdmin,
-                        userRole: user?.role
+                        storeName: store.name,
+                        userFromAuth: user,
+                        userRole: user?.role,
+                        canEditResult: canEdit,
+                        isSuperAdmin: user?.role === 'superadmin'
                       });
 
                       if (!canEdit) {
